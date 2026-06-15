@@ -685,7 +685,7 @@ body {
   <!-- CTA -->
   <div class="hero-foot">
     <p class="hero-note">Заполнение брифа займёт около 7&nbsp;минут.</p>
-    <button class="btn-hero" onclick="openForm()">
+    <button class="btn-hero" id="btn-open-form">
       Обсудить проект
       <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
         <path d="M3 8.5H14M14 8.5L9 3.5M14 8.5L9 13.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -702,11 +702,11 @@ body {
 
   <!-- Top bar -->
   <div class="form-topbar">
-    <button class="topbar-btn" id="btn-back" onclick="prevStep()" style="visibility:hidden;" title="Назад">
+    <button class="topbar-btn" id="btn-back" style="visibility:hidden;" title="Назад">
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="#1A1918" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <span class="step-counter" id="step-counter">Шаг 1 из 9</span>
-    <button class="topbar-btn" onclick="closeForm()" title="Закрыть">
+    <button class="topbar-btn" id="btn-close-form" title="Закрыть">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 2L16 16M16 2L2 16" stroke="#A8A49E" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
   </div>
@@ -781,19 +781,19 @@ body {
       <h2 class="step-title">Сколько товаров планируется?</h2>
       <p class="step-hint">Приблизительно.</p>
       <div class="cards">
-        <div class="card" data-field="products" data-value="До 50" onclick="selectCard(this)">
+        <div class="card" data-field="products" data-value="До 50">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">До 50</div><div class="card-desc">Небольшой фокусный ассортимент</div></div>
         </div>
-        <div class="card" data-field="products" data-value="50–200" onclick="selectCard(this)">
+        <div class="card" data-field="products" data-value="50–200">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">50–200</div><div class="card-desc">Средний каталог</div></div>
         </div>
-        <div class="card" data-field="products" data-value="200–1000" onclick="selectCard(this)">
+        <div class="card" data-field="products" data-value="200–1000">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">200–1000</div><div class="card-desc">Большой каталог</div></div>
         </div>
-        <div class="card" data-field="products" data-value="Более 1000" onclick="selectCard(this)">
+        <div class="card" data-field="products" data-value="Более 1000">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">Более 1000</div><div class="card-desc">Масштабный маркетплейс</div></div>
         </div>
@@ -806,15 +806,15 @@ body {
       <h2 class="step-title">Нужно SEO-продвижение?</h2>
       <p class="step-hint">Органический трафик из поисковых систем.</p>
       <div class="cards">
-        <div class="card" data-field="seo" data-value="Да, хотим SEO-продвижение" onclick="selectCard(this)">
+        <div class="card" data-field="seo" data-value="Да, хотим SEO-продвижение">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">Да, хотим продвижение</div><div class="card-desc">Нужен трафик из поиска</div></div>
         </div>
-        <div class="card" data-field="seo" data-value="Пока нет, достаточно магазина" onclick="selectCard(this)">
+        <div class="card" data-field="seo" data-value="Пока нет, достаточно магазина">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">Пока нет</div><div class="card-desc">Достаточно запустить магазин</div></div>
         </div>
-        <div class="card" data-field="seo" data-value="Обсудим на звонке" onclick="selectCard(this)">
+        <div class="card" data-field="seo" data-value="Обсудим на звонке">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">Расскажите подробнее</div><div class="card-desc">Обсудим на звонке</div></div>
         </div>
@@ -827,19 +827,19 @@ body {
       <h2 class="step-title">Бюджет на создание магазина?</h2>
       <p class="step-hint">Ориентировочно, без учёта ежемесячной подписки Хорошоп.</p>
       <div class="cards">
-        <div class="card" data-field="budget" data-value="До $500" onclick="selectCard(this)">
+        <div class="card" data-field="budget" data-value="До $500">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">До $500</div></div>
         </div>
-        <div class="card" data-field="budget" data-value="$500–$1 000" onclick="selectCard(this)">
+        <div class="card" data-field="budget" data-value="$500–$1 000">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">$500–$1 000</div></div>
         </div>
-        <div class="card" data-field="budget" data-value="$1 000–$2 000" onclick="selectCard(this)">
+        <div class="card" data-field="budget" data-value="$1 000–$2 000">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">$1 000–$2 000</div></div>
         </div>
-        <div class="card" data-field="budget" data-value="Обсудим на встрече" onclick="selectCard(this)">
+        <div class="card" data-field="budget" data-value="Обсудим на встрече">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">Обсудим на встрече</div><div class="card-desc">Зависит от объёма</div></div>
         </div>
@@ -852,15 +852,15 @@ body {
       <h2 class="step-title">Когда хотите запустить?</h2>
       <p class="step-hint">Это поможет нам правильно расставить приоритеты.</p>
       <div class="cards">
-        <div class="card" data-field="deadline" data-value="Как можно скорее" onclick="selectCard(this)">
+        <div class="card" data-field="deadline" data-value="Как можно скорее">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">Как можно скорее</div><div class="card-desc">Срочно, готовы начать сразу</div></div>
         </div>
-        <div class="card" data-field="deadline" data-value="1–2 месяца" onclick="selectCard(this)">
+        <div class="card" data-field="deadline" data-value="1–2 месяца">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">В течение 1–2 месяцев</div></div>
         </div>
-        <div class="card" data-field="deadline" data-value="Пока не определился" onclick="selectCard(this)">
+        <div class="card" data-field="deadline" data-value="Пока не определился">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">Пока не определился</div><div class="card-desc">Изучаю возможности</div></div>
         </div>
@@ -882,8 +882,8 @@ body {
 
   <!-- Fixed action button -->
   <div class="form-action">
-    <button class="btn-next" id="btn-next" onclick="nextStep()">Продолжить</button>
-    <span class="skip-link" id="skip-link" style="display:none;" onclick="skipStep()">Пропустить</span>
+    <button class="btn-next" id="btn-next">Продолжить</button>
+    <span class="skip-link" id="skip-link" style="display:none;">Пропустить</span>
   </div>
 </div><!-- /form-overlay -->
 
@@ -905,7 +905,7 @@ body {
     <li><span class="check-mark">✓</span><span>Свяжемся с вами для обсуждения деталей.</span></li>
   </ul>
   <p class="success-footnote">Каждый проект рассматривается индивидуально.</p>
-  <button class="btn-return" onclick="returnHome()">Вернуться на главную</button>
+  <button class="btn-return" id="btn-return">Вернуться на главную</button>
 </div>
 
 
@@ -1236,28 +1236,62 @@ async function submitForm() {
   }
 }
 
-// ── INPUT CLEANUP ────────────────────────────────────────────
-// Remove error state on input
-document.addEventListener('input', function(e) {
-  const field = e.target.closest('.field');
-  if (field && field.classList.contains('has-error')) {
-    field.classList.remove('has-error');
-  }
+// ── EVENT LISTENERS ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Hero open button
+  var btnOpen = document.getElementById('btn-open-form');
+  if (btnOpen) btnOpen.addEventListener('click', openForm);
+
+  // Close button
+  var btnClose = document.getElementById('btn-close-form');
+  if (btnClose) btnClose.addEventListener('click', closeForm);
+
+  // Back button
+  var btnBack = document.getElementById('btn-back');
+  if (btnBack) btnBack.addEventListener('click', prevStep);
+
+  // Next / Submit button
+  var btnNext = document.getElementById('btn-next');
+  if (btnNext) btnNext.addEventListener('click', nextStep);
+
+  // Skip link
+  var skipLink = document.getElementById('skip-link');
+  if (skipLink) skipLink.addEventListener('click', skipStep);
+
+  // Return home button
+  var btnReturn = document.getElementById('btn-return');
+  if (btnReturn) btnReturn.addEventListener('click', returnHome);
+
+  // Backdrop close (desktop)
+  var backdrop = document.getElementById('backdrop');
+  if (backdrop) backdrop.addEventListener('click', closeForm);
+
+  // Card selection - use event delegation
+  document.addEventListener('click', function(e) {
+    var card = e.target.closest('.card');
+    if (card) selectCard(card);
+  });
+
+  // Remove error state on input
+  document.addEventListener('input', function(e) {
+    var field = e.target.closest('.field');
+    if (field && field.classList.contains('has-error')) {
+      field.classList.remove('has-error');
+    }
+  });
+
+  // Enter key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      nextStep();
+    }
+  });
+
+  // Initial UI state
+  updateUI();
 });
-
-// Enter key handling
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
-    e.preventDefault();
-    nextStep();
-  }
-});
-
-// Close on backdrop click (desktop)
-document.getElementById('backdrop').addEventListener('click', closeForm);
-
-// Initial state
-updateUI();
 </script>
 </body>
 </html>
