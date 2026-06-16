@@ -1,80 +1,68 @@
-// api/lead.js — серверная функция Vercel для приёма заявок с лендинга МС.
+// api/lead.js — серверная функция Vercel (CommonJS, без зависимостей)
 //
-// Зачем: токен бота хранится на сервере (в переменных окружения), а не в коде
-// страницы. Заодно решается проблема CORS и ошибки "Failed to fetch".
+// ВАЖНО про размещение:
+//   Файл должен лежать по пути  api/lead.js  (папка "api" + файл "lead.js"),
+//   тогда адрес функции будет  /api/lead.
+//   НЕ называйте файл api-lead.js в корне — это даст /api-lead.js, а не /api/lead.
 //
-// ─── Как развернуть ───────────────────────────────────────────────
-// 1. Положите этот файл по пути  api/lead.js  в проект на Vercel
-//    (или это и есть отдельный проект только с папкой /api).
-// 2. В настройках проекта Vercel → Settings → Environment Variables добавьте:
-//       TELEGRAM_BOT_TOKEN = <токен вашего бота от @BotFather>
-//       TELEGRAM_CHAT_ID   = <id чата/канала, куда слать заявки>
-// 3. Задеплойте. URL функции будет:  https://<ваш-проект>.vercel.app/api/lead
-// 4. В лендинге, в объекте CONFIG, пропишите:
-//       SUBMIT_ENDPOINT: 'https://<ваш-проект>.vercel.app/api/lead'
-//    Тогда страница будет слать заявки сюда, а токен в коде указывать не нужно.
-//
-// Node 18+ на Vercel уже имеет глобальный fetch — внешних зависимостей нет.
+// Переменные окружения (Vercel → Settings → Environment Variables),
+// поставьте галочки на все среды (Production, Preview, Development):
+//   TELEGRAM_BOT_TOKEN = <токен бота от @BotFather>
+//   TELEGRAM_CHAT_ID   = <id чата, куда слать заявки>
+// После добавления переменных — Redeploy.
 
-export default async function handler(req, res) {
-  // CORS — на случай, если лендинг живёт на другом домене
+module.exports = async function handler(req, res) {
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Health-check: открыв этот адрес в браузере (GET), вы должны увидеть JSON ниже.
+  // Если видите 404 — функция не задеплоена (проверьте путь api/lead.js).
+  if (req.method === 'GET') {
+    return res.status(200).json({ ok: true, hint: 'Endpoint alive. Use POST to submit a lead.' });
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    const { lead, text } = req.body || {};
+    // Vercel обычно парсит JSON сам, но подстрахуемся
+    var body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch (e) { body = {}; }
+    }
+    body = body || {};
+    var lead = body.lead;
+    var text = body.text;
 
-    const token  = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
+    var token = process.env.TELEGRAM_BOT_TOKEN;
+    var chatId = process.env.TELEGRAM_CHAT_ID;
     if (!token || !chatId) {
-      return res.status(500).json({ error: 'Server is not configured: missing TELEGRAM env vars' });
+      return res.status(500).json({ error: 'Server is not configured: missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID' });
     }
 
-    // Текст уже приходит готовым с фронта; если вдруг нет — собираем из lead.
-    const message = text || JSON.stringify(lead || {}, null, 2);
+    var message = text || JSON.stringify(lead || {}, null, 2);
 
-    const tg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    var tg = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
         text: message,
         parse_mode: 'HTML',
-        disable_web_page_preview: true,
-      }),
+        disable_web_page_preview: true
+      })
     });
 
     if (!tg.ok) {
-      const detail = await tg.text();
-      return res.status(502).json({ error: 'Telegram rejected the request', detail });
+      var detail = await tg.text();
+      return res.status(502).json({ error: 'Telegram rejected the request', detail: detail });
     }
-
-    // ─── (опционально) сюда же можно добавить отправку в SalesDrive ───
-    // const salesUrl = process.env.SALESDRIVE_HANDLER;  // напр. https://<acc>.salesdrive.me/handler/
-    // const salesKey = process.env.SALESDRIVE_FORM_KEY;
-    // if (salesUrl && salesKey && lead) {
-    //   await fetch(salesUrl, {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({
-    //       form: salesKey,
-    //       data: {
-    //         fName: lead.name || '',
-    //         phone: lead.phone || '',
-    //         email: lead.email || '',
-    //         organization: lead.company || '',
-    //         comment: text || '',
-    //       },
-    //     }),
-    //   }).catch(() => {});  // не валим заявку, если CRM временно недоступна
-    // }
 
     return res.status(200).json({ ok: true });
   } catch (e) {
-    return res.status(500).json({ error: e.message || 'Unknown error' });
+    return res.status(500).json({ error: (e && e.message) || 'Unknown error' });
   }
-}
+};
