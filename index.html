@@ -204,7 +204,8 @@ body {
 #form-overlay {
   position: fixed;
   inset: 0;
-  background: #FFFFFF;
+  background: #0F0D0C;
+  color: #F8F7F4;
   z-index: 200;
   display: flex;
   flex-direction: column;
@@ -212,18 +213,32 @@ body {
   transform: translateY(28px);
   visibility: hidden;
   pointer-events: none;
-  transition: opacity 0.38s cubic-bezier(0.25,0.46,0.45,0.94),
-              transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94),
-              visibility 0s linear 0.4s;
+  overflow: hidden;
+  transition: opacity 0.42s cubic-bezier(0.25,0.46,0.45,0.94),
+              transform 0.42s cubic-bezier(0.25,0.46,0.45,0.94),
+              visibility 0s linear 0.45s;
 }
 #form-overlay.active {
   opacity: 1;
   transform: translateY(0);
   visibility: visible;
   pointer-events: all;
-  transition: opacity 0.38s cubic-bezier(0.25,0.46,0.45,0.94),
-              transform 0.38s cubic-bezier(0.25,0.46,0.45,0.94),
+  transition: opacity 0.42s cubic-bezier(0.25,0.46,0.45,0.94),
+              transform 0.42s cubic-bezier(0.25,0.46,0.45,0.94),
               visibility 0s linear 0s;
+}
+/* grain + ambient glow — same language as the hero */
+#form-overlay::before {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  opacity:0.04;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:220px 220px;
+}
+#form-overlay::after {
+  content:''; position:absolute; top:-120px; left:50%; transform:translateX(-50%);
+  width:520px; height:340px; pointer-events:none; z-index:0;
+  background:radial-gradient(circle, rgba(200,168,75,0.10) 0%, transparent 68%);
+  filter:blur(40px);
 }
 
 /* ── FORM TOPBAR ── */
@@ -232,10 +247,11 @@ body {
   align-items: center;
   justify-content: space-between;
   height: 56px;
-  padding: 0 16px;
+  padding: 0 14px;
   padding-top: env(safe-area-inset-top);
   flex-shrink: 0;
   position: relative;
+  z-index: 2;
 }
 .topbar-btn {
   width: 40px;
@@ -250,40 +266,41 @@ body {
   touch-action: manipulation;
   border-radius: 10px;
   transition: background 0.15s;
-  color: #1A1918;
-  font-size: 20px;
-  font-family: 'Inter', sans-serif;
+  color: #F8F7F4;
 }
-.topbar-btn:active { background: #F3F2EF; }
+.topbar-btn:active { background: rgba(255,255,255,0.06); }
 .topbar-btn svg { display: block; }
 .step-counter {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
   font-weight: 500;
-  color: #A8A49E;
-  letter-spacing: 0.03em;
+  color: rgba(248,247,244,0.4);
+  letter-spacing: 0.22em;
   pointer-events: none;
 }
 
 /* ── PROGRESS ── */
 .progress-wrap {
-  padding: 0 24px 2px;
+  padding: 0 24px 4px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 2;
 }
-.progress-track {
+.stepper { display: flex; gap: 5px; }
+.stepper .seg {
+  flex: 1;
   height: 3px;
-  background: #F0EFEB;
   border-radius: 100px;
-  overflow: hidden;
+  background: rgba(255,255,255,0.1);
+  transition: background 0.4s ease, box-shadow 0.4s ease;
 }
-.progress-fill {
-  height: 100%;
-  background: #1A1918;
-  border-radius: 100px;
-  transition: width 0.45s cubic-bezier(0.25,0.46,0.45,0.94);
-  width: 0%;
+.stepper .seg.done { background: rgba(200,168,75,0.5); }
+.stepper .seg.current {
+  background: rgba(200,168,75,0.95);
+  box-shadow: 0 0 8px rgba(200,168,75,0.45);
 }
 
 /* ── STEPS CONTAINER ── */
@@ -293,62 +310,117 @@ body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   position: relative;
+  z-index: 1;
+  perspective: 1400px;
+  perspective-origin: 50% 30%;
 }
 
 /* ── SINGLE STEP ── */
 .step {
   position: absolute;
   top: 0; left: 0; width: 100%;
-  padding: 32px 24px 140px;
+  padding: 30px 26px 150px;
   opacity: 0;
-  transform: translateX(42px);
   pointer-events: none;
-  transition: opacity 0.28s ease, transform 0.28s ease;
+  transform-origin: left center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   will-change: transform, opacity;
 }
 .step.active {
-  opacity: 1;
-  transform: translateX(0);
-  pointer-events: all;
   position: relative;
-}
-.step.exit-left {
-  opacity: 0;
-  transform: translateX(-42px);
+  opacity: 1;
+  pointer-events: all;
+  transform: none;
 }
 
-.step-icon {
-  font-size: 28px;
-  margin-bottom: 18px;
-  line-height: 1;
+/* Forward — current page turns away to the left, next revealed beneath */
+/* During a turn each sheet is OPAQUE so pages never ghost through one another */
+.step.turn-out-fwd, .step.turn-in-fwd,
+.step.turn-in-back, .step.turn-out-back { background: #0F0D0C; }
+
+/* Forward — current sheet turns away on top; next sits as a solid sheet beneath */
+.step.turn-out-fwd { opacity: 1; z-index: 3; animation: pageOutFwd 0.72s cubic-bezier(0.45,0.05,0.35,1) forwards; }
+.step.turn-in-fwd  { opacity: 1; z-index: 1; }
+/* Back — previous sheet lays back down on top; current sits solid beneath */
+.step.turn-in-back { opacity: 1; z-index: 3; animation: pageInBack 0.72s cubic-bezier(0.45,0.05,0.35,1) forwards; }
+.step.turn-out-back{ opacity: 1; z-index: 1; }
+
+/* Soft shadow sweeping across the turning sheet */
+.step.turn-out-fwd::before,
+.step.turn-in-back::before {
+  content: '';
+  position: absolute; inset: 0;
+  z-index: 5; pointer-events: none;
+  background: linear-gradient(90deg, rgba(0,0,0,0) 30%, rgba(0,0,0,0.55) 100%);
+  animation: pageShade 0.72s ease forwards;
 }
+
+@keyframes pageOutFwd  { 0% { transform: rotateY(0deg); }    100% { transform: rotateY(-105deg); } }
+@keyframes pageInBack  { 0% { transform: rotateY(-105deg); } 100% { transform: rotateY(0deg); } }
+@keyframes pageInFwd   { 0% { opacity: 0.5; } 60% { opacity: 0.7; } 100% { opacity: 1; } }
+@keyframes pageOutBack { 0% { opacity: 1; }   100% { opacity: 0; } }
+@keyframes pageShade   { 0% { opacity: 0; } 55% { opacity: 0.8; } 100% { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .step.turn-out-fwd, .step.turn-out-back { animation: rmFadeOut 0.25s ease forwards; }
+  .step.turn-in-fwd,  .step.turn-in-back  { animation: rmFadeIn 0.25s ease forwards; transform: none; }
+  .step.turn-out-fwd::before, .step.turn-in-back::before { display: none; }
+}
+@keyframes rmFadeOut { to { opacity: 0; } }
+@keyframes rmFadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Eyebrow per step — names the section, replaces the emoji */
+.step-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+.step-eyebrow::before {
+  content: '';
+  display: block;
+  width: 22px;
+  height: 1px;
+  background: rgba(200,168,75,0.7);
+}
+.step-eyebrow span {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(200,168,75,0.78);
+}
+
 .step-title {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 30px;
+  font-size: 33px;
   font-weight: 400;
-  line-height: 1.18;
-  color: #1A1918;
-  margin-bottom: 8px;
+  line-height: 1.16;
+  letter-spacing: -0.015em;
+  color: #F8F7F4;
+  margin-bottom: 10px;
 }
 .step-hint {
   font-size: 15px;
-  color: #A8A49E;
-  line-height: 1.55;
-  margin-bottom: 28px;
+  color: rgba(248,247,244,0.5);
+  line-height: 1.6;
+  margin-bottom: 30px;
+  max-width: 360px;
 }
-.step-hint b { color: #777; font-weight: 500; }
+.step-hint b { color: rgba(248,247,244,0.82); font-weight: 500; }
 
 /* ── FIELDS ── */
 .field { margin-bottom: 14px; }
 .field:last-child { margin-bottom: 0; }
 .field label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  color: #888;
-  letter-spacing: 0.06em;
+  color: rgba(248,247,244,0.42);
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
 }
 .field input,
 .field textarea {
@@ -356,10 +428,10 @@ body {
   padding: 15px 16px;
   font-family: 'Inter', sans-serif;
   font-size: 16px;
-  color: #1A1918;
-  background: #F8F7F4;
-  border: 1.5px solid #E8E6E1;
-  border-radius: 14px;
+  color: #F8F7F4;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 13px;
   outline: none;
   -webkit-appearance: none;
   appearance: none;
@@ -368,34 +440,87 @@ body {
 }
 .field input:focus,
 .field textarea:focus {
-  border-color: #1A1918;
-  background: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(26,25,24,0.06);
+  border-color: rgba(200,168,75,0.65);
+  background: rgba(255,255,255,0.055);
+  box-shadow: 0 0 0 3px rgba(200,168,75,0.1);
 }
 .field input::placeholder,
-.field textarea::placeholder { color: #C8C5BF; }
-.field textarea { resize: none; min-height: 110px; line-height: 1.6; padding-top: 14px; }
+.field textarea::placeholder { color: rgba(248,247,244,0.3); }
+.field textarea { resize: none; min-height: 112px; line-height: 1.6; padding-top: 14px; }
 .field-err {
   display: none;
   font-size: 12px;
-  color: #C8472A;
-  margin-top: 6px;
+  color: #D98B6E;
+  margin-top: 7px;
   padding-left: 2px;
+  letter-spacing: 0.01em;
 }
 .field.has-error input,
-.field.has-error textarea { border-color: #C8472A; background: #FFF8F6; }
+.field.has-error textarea { border-color: rgba(217,139,110,0.6); background: rgba(217,139,110,0.07); }
 .field.has-error .field-err { display: block; }
+
+/* ── LIVE PHONE DIGIT METER ── */
+.phone-meter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 0 2px;
+}
+.phone-meter .pips { display: flex; gap: 4px; }
+.phone-meter .pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.13);
+  transition: background 0.18s ease;
+}
+.phone-meter .pip.on { background: rgba(200,168,75,0.8); animation: pipPop 0.22s ease; }
+.phone-meter.valid .pip.on { background: #C8A84B; }
+.phone-meter.over .pip.on { background: #D98B6E; }
+@keyframes pipPop { 0% { transform: scale(0.5); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+.phone-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(248,247,244,0.4);
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+.phone-meter.valid .phone-status { color: rgba(200,168,75,0.9); }
+.phone-meter.over .phone-status { color: #D98B6E; }
+.phone-status .phone-count { font-weight: 600; font-variant-numeric: tabular-nums; }
+.phone-check {
+  position: relative;
+  width: 13px; height: 13px;
+  opacity: 0; transform: scale(0.5);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.phone-meter.valid .phone-check { opacity: 1; transform: scale(1); }
+.phone-check::after {
+  content: '';
+  position: absolute;
+  left: 4px; top: 0;
+  width: 4px; height: 8px;
+  border: solid rgba(200,168,75,0.95);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
 
 /* ── CARDS ── */
 .cards { display: flex; flex-direction: column; gap: 10px; }
 .card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 15px;
   padding: 16px 18px;
-  background: #F8F7F4;
-  border: 1.5px solid #E8E6E1;
-  border-radius: 16px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 15px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -405,15 +530,15 @@ body {
 }
 .card:active { transform: scale(0.99); }
 .card.selected {
-  border-color: #1A1918;
-  background: #FFFFFF;
-  box-shadow: 0 2px 12px rgba(26,25,24,0.08);
+  border-color: rgba(200,168,75,0.6);
+  background: rgba(200,168,75,0.07);
+  box-shadow: 0 2px 18px rgba(200,168,75,0.06);
 }
 .card-radio {
-  width: 22px;
-  height: 22px;
+  width: 21px;
+  height: 21px;
   border-radius: 50%;
-  border: 2px solid #D5D2CC;
+  border: 1.5px solid rgba(255,255,255,0.28);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -421,27 +546,40 @@ body {
   transition: all 0.18s;
 }
 .card.selected .card-radio {
-  background: #1A1918;
-  border-color: #1A1918;
+  background: #C8A84B;
+  border-color: #C8A84B;
 }
 .card.selected .card-radio::after {
   content: '';
   width: 7px;
   height: 7px;
-  background: white;
+  background: #0F0D0C;
   border-radius: 50%;
 }
+/* multi-select variant — square box with a check */
+.cards.multi .card-radio { border-radius: 6px; }
+.cards.multi .card.selected .card-radio { background: #C8A84B; border-color: #C8A84B; }
+.cards.multi .card.selected .card-radio::after {
+  width: 5px;
+  height: 9px;
+  background: none;
+  border: solid #0F0D0C;
+  border-width: 0 2px 2px 0;
+  border-radius: 0;
+  transform: rotate(45deg);
+  margin-top: -2px;
+}
 .card-body { flex: 1; }
-.card-label { font-size: 16px; font-weight: 500; color: #1A1918; line-height: 1.3; }
-.card-desc { font-size: 13px; color: #A8A49E; margin-top: 2px; line-height: 1.4; }
+.card-label { font-size: 15.5px; font-weight: 500; color: #F8F7F4; line-height: 1.3; }
+.card-desc { font-size: 13px; color: rgba(248,247,244,0.45); margin-top: 3px; line-height: 1.4; }
 
 /* ── FIXED ACTION ── */
 .form-action {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  padding: 16px 20px;
-  padding-bottom: max(20px, calc(env(safe-area-inset-bottom) + 12px));
-  background: linear-gradient(to top, #fff 65%, rgba(255,255,255,0));
+  padding: 16px 24px;
+  padding-bottom: max(22px, calc(env(safe-area-inset-bottom) + 14px));
+  background: linear-gradient(to top, #0F0D0C 62%, rgba(15,13,12,0));
   z-index: 50;
   display: none;
 }
@@ -454,29 +592,39 @@ body {
   gap: 8px;
   width: 100%;
   min-height: 58px;
-  background: #1A1918;
-  color: #F8F7F4;
+  background: #F8F7F4;
+  color: #0F0D0C;
   font-family: 'Inter', sans-serif;
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.01em;
   border: none;
-  border-radius: 16px;
+  border-radius: 15px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition: opacity 0.2s, transform 0.15s;
   position: relative;
+  overflow: hidden;
 }
-.btn-next:active { opacity: 0.86; transform: scale(0.992); }
-.btn-next:disabled { opacity: 0.28; pointer-events: none; }
+.btn-next::before {
+  content:''; position:absolute;
+  top:0; left:-100%; width:55%; height:100%;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+  transform:skewX(-18deg);
+  animation:shimmer 4s ease-in-out 1.5s infinite;
+}
+.btn-next:active { opacity: 0.9; transform: scale(0.992); }
+.btn-next:disabled { opacity: 0.25; pointer-events: none; }
+.btn-next:disabled::before { display: none; }
 .btn-next.loading { color: transparent; }
+.btn-next.loading::before { display: none; }
 .btn-next.loading::after {
   content: '';
   position: absolute;
   width: 22px; height: 22px;
-  border: 2px solid rgba(248,247,244,0.3);
-  border-top-color: #F8F7F4;
+  border: 2px solid rgba(15,13,12,0.22);
+  border-top-color: #0F0D0C;
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
@@ -485,115 +633,166 @@ body {
 .skip-link {
   display: block;
   text-align: center;
-  font-size: 14px;
-  color: #B5B0A8;
-  margin-top: 12px;
+  font-size: 13.5px;
+  color: rgba(248,247,244,0.4);
+  margin-top: 14px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   padding: 4px 0;
+  letter-spacing: 0.02em;
   transition: color 0.15s;
 }
-.skip-link:active { color: #888; }
+.skip-link:active { color: rgba(248,247,244,0.7); }
 
 /* ── SUCCESS SCREEN ── */
 #success-screen {
   position: fixed;
   inset: 0;
-  background: #FFFFFF;
+  background: #0F0D0C;
+  color: #F8F7F4;
   z-index: 300;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 36px 28px;
-  padding-bottom: max(36px, calc(env(safe-area-inset-bottom) + 20px));
+  padding: 40px 30px;
+  padding-bottom: max(40px, calc(env(safe-area-inset-bottom) + 20px));
   opacity: 0;
   transform: scale(0.97);
   visibility: hidden;
   pointer-events: none;
+  overflow-x: hidden;
   transition: opacity 0.45s ease, transform 0.45s ease, visibility 0s linear 0.45s;
   text-align: center;
 }
 #success-screen.active { opacity: 1; transform: scale(1); visibility: visible; pointer-events: all; transition: opacity 0.45s ease, transform 0.45s ease, visibility 0s linear 0s; }
+#success-screen::before {
+  content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
+  opacity:0.04;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:220px 220px;
+}
+#success-screen::after {
+  content:''; position:absolute; top:8%; left:50%; transform:translateX(-50%);
+  width:440px; height:300px; pointer-events:none; z-index:0;
+  background:radial-gradient(circle, rgba(200,168,75,0.12) 0%, transparent 68%);
+  filter:blur(45px);
+}
+#success-screen > * { position: relative; z-index: 1; }
 
 .success-icon {
-  width: 72px; height: 72px;
+  width: 70px; height: 70px;
   border-radius: 50%;
-  background: #1A1918;
+  background: rgba(200,168,75,0.07);
+  border: 1px solid rgba(200,168,75,0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 28px;
+  margin: 0 auto 24px;
   transform: scale(0);
   transition: transform 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.2s;
 }
 #success-screen.active .success-icon { transform: scale(1); }
 .success-icon svg { display: block; }
 
+.success-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+.success-eyebrow::before,
+.success-eyebrow::after {
+  content: '';
+  display: block;
+  width: 20px;
+  height: 1px;
+  background: rgba(200,168,75,0.55);
+}
+.success-eyebrow span {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(200,168,75,0.75);
+}
+
 .success-title {
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 32px;
+  font-size: 34px;
   font-weight: 400;
-  line-height: 1.2;
-  color: #1A1918;
+  line-height: 1.18;
+  letter-spacing: -0.015em;
+  color: #F8F7F4;
   margin-bottom: 14px;
 }
 .success-text {
   font-size: 15px;
-  color: #A8A49E;
+  color: rgba(248,247,244,0.55);
   line-height: 1.65;
   margin-bottom: 30px;
-  max-width: 300px;
+  max-width: 320px;
 }
 .success-list {
   list-style: none;
   width: 100%;
-  max-width: 300px;
-  margin-bottom: 30px;
+  max-width: 320px;
+  margin-bottom: 28px;
   text-align: left;
 }
 .success-list li {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   font-size: 14px;
-  color: #555;
+  color: rgba(248,247,244,0.72);
   line-height: 1.5;
-  padding: 8px 0;
-  border-bottom: 1px solid #F3F2EF;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 .success-list li:last-child { border-bottom: none; }
-.check-mark {
-  font-size: 14px;
-  color: #1A1918;
-  font-weight: 700;
+.success-tick {
+  position: relative;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 3px;
+}
+.success-tick::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 0;
+  width: 5px; height: 9px;
+  border: solid rgba(200,168,75,0.95);
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
 }
 .success-footnote {
   font-size: 13px;
-  color: #C8C5BF;
+  color: rgba(248,247,244,0.3);
   margin-bottom: 28px;
   max-width: 280px;
+  line-height: 1.5;
 }
 .btn-return {
   width: 100%;
-  max-width: 300px;
+  max-width: 320px;
   min-height: 52px;
   background: transparent;
-  border: 1.5px solid #E8E6E1;
-  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 13px;
   font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 500;
-  color: #1A1918;
+  color: #F8F7F4;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  letter-spacing: 0.01em;
   transition: background 0.18s, border-color 0.18s;
 }
-.btn-return:active { background: #F8F7F4; border-color: #D5D2CC; }
+.btn-return:active { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.3); }
 
 /* ── DESKTOP ── */
 @media (min-width: 680px) {
@@ -616,7 +815,7 @@ body {
     width: 480px;
     max-height: 88vh;
     border-radius: 24px;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.22), 0 0 0 1px rgba(0,0,0,0.06);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
     overflow: hidden;
   }
   #form-overlay.active {
@@ -632,7 +831,7 @@ body {
     width: 460px;
     padding: 48px 40px;
     border-radius: 24px;
-    box-shadow: 0 32px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.06);
     max-height: 88vh;
     overflow-y: auto;
   }
@@ -647,12 +846,13 @@ body {
   background: rgba(26,25,24,0.55);
   z-index: 150;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.35s ease;
   backdrop-filter: blur(2px);
 }
 @media (min-width: 680px) {
   #backdrop { display: block; }
-  #backdrop.active { opacity: 1; }
+  #backdrop.active { opacity: 1; pointer-events: auto; }
 }
 </style>
 </head>
@@ -710,17 +910,17 @@ body {
   <!-- Top bar -->
   <div class="form-topbar">
     <button class="topbar-btn" id="btn-back" style="visibility:hidden;" title="Назад">
-      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="#1A1918" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M12 4L6 10L12 16" stroke="#F8F7F4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <span class="step-counter" id="step-counter">Шаг 1 из 9</span>
     <button class="topbar-btn" id="btn-close-form" title="Закрыть">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 2L16 16M16 2L2 16" stroke="#A8A49E" stroke-width="2" stroke-linecap="round"/></svg>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M2 2L16 16M16 2L2 16" stroke="rgba(248,247,244,0.55)" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
   </div>
 
   <!-- Progress bar -->
   <div class="progress-wrap">
-    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="stepper" id="stepper"></div>
   </div>
 
   <!-- Steps -->
@@ -728,109 +928,239 @@ body {
 
     <!-- STEP 1: Знакомство -->
     <div class="step active" data-step="1">
-      <div class="step-icon">👋</div>
+      <div class="step-eyebrow"><span>Знакомство</span></div>
       <h2 class="step-title">Расскажите о&nbsp;вашем проекте</h2>
-      <p class="step-hint">Это поможет нам лучше подготовиться к разговору.</p>
+      <p class="step-hint">Пара деталей, чтобы подготовиться к&nbsp;разговору предметно.</p>
       <div class="field" id="f-name">
         <label>Ваше имя</label>
         <input type="text" id="inp-name" placeholder="Как вас зовут?" autocomplete="given-name" autocorrect="off">
         <div class="field-err">Пожалуйста, введите ваше имя</div>
       </div>
       <div class="field">
-        <label>Компания или магазин</label>
+        <label>Компания или бренд</label>
         <input type="text" id="inp-company" placeholder="Название проекта" autocomplete="organization" autocorrect="off">
       </div>
     </div>
 
     <!-- STEP 2: Контакты -->
     <div class="step" data-step="2">
-      <div class="step-icon">📬</div>
+      <div class="step-eyebrow"><span>Контакты</span></div>
       <h2 class="step-title">Как с вами связаться?</h2>
-      <p class="step-hint">Мы свяжемся удобным для вас способом.</p>
+      <p class="step-hint">Свяжемся удобным способом и&nbsp;пришлём оценку проекта.</p>
       <div class="field" id="f-phone">
         <label>Телефон</label>
-        <input type="tel" id="inp-phone" placeholder="+38 0__ ___ __ __" autocomplete="tel">
-        <div class="field-err">Введите корректный номер телефона</div>
+        <input type="tel" id="inp-phone" placeholder="+38 0__ ___ __ __" autocomplete="tel" inputmode="tel">
+        <div class="phone-meter" id="phone-meter">
+          <div class="pips"></div>
+          <span class="phone-status"><span class="phone-count">0</span>&nbsp;<span class="phone-count-label">цифр</span><span class="phone-check" aria-hidden="true"></span></span>
+        </div>
+        <div class="field-err">Введите номер целиком — не меньше 10 цифр</div>
       </div>
       <div class="field" id="f-email">
         <label>Email</label>
         <input type="email" id="inp-email" placeholder="your@email.com" autocomplete="email" inputmode="email" autocorrect="off" autocapitalize="none">
-        <div class="field-err">Введите корректный email</div>
+        <div class="field-err">Проверьте формат email</div>
       </div>
     </div>
 
-    <!-- STEP 3: Telegram -->
+    <!-- STEP 3: Тип задачи -->
     <div class="step" data-step="3">
-      <div class="step-icon">✈️</div>
-      <h2 class="step-title">Ваш Telegram для&nbsp;связи</h2>
-      <p class="step-hint">Часто удобнее всего общаться именно там. <b>Необязательно.</b></p>
-      <div class="field">
-        <label>Telegram</label>
-        <input type="text" id="inp-telegram" placeholder="@username" autocorrect="off" autocapitalize="none">
+      <div class="step-eyebrow"><span>Задача</span></div>
+      <h2 class="step-title">Что нужно сделать?</h2>
+      <p class="step-hint">От этого зависит и&nbsp;подход, и&nbsp;оценка.</p>
+      <div class="cards">
+        <div class="card" data-field="projectType" data-value="Новый магазин с нуля">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Новый магазин с&nbsp;нуля</div><div class="card-desc">Соберём и настроим на Хорошоп</div></div>
+        </div>
+        <div class="card" data-field="projectType" data-value="Перенос с другой платформы">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Перенос с другой платформы</div><div class="card-desc">Prom, OpenCart, WordPress и др.</div></div>
+        </div>
+        <div class="card" data-field="projectType" data-value="Доработка действующего магазина на Хорошоп">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Доработка действующего</div><div class="card-desc">Магазин уже на Хорошоп</div></div>
+        </div>
+        <div class="card" data-field="projectType" data-value="Нужна консультация">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Пока не определился</div><div class="card-desc">Нужна консультация</div></div>
+        </div>
       </div>
     </div>
 
     <!-- STEP 4: Ниша -->
     <div class="step" data-step="4">
-      <div class="step-icon">🏪</div>
-      <h2 class="step-title">В какой нише&nbsp;ваш&nbsp;магазин?</h2>
-      <p class="step-hint">Опишите своими словами — чем подробнее, тем лучше.</p>
+      <div class="step-eyebrow"><span>Ниша</span></div>
+      <h2 class="step-title">Что вы продаёте?</h2>
+      <p class="step-hint">Опишите ассортимент своими словами — чем подробнее, тем точнее оценка.</p>
       <div class="field" id="f-niche">
         <label>Ниша и ассортимент</label>
-        <textarea id="inp-niche" placeholder="Например: женская одежда plus-size, натуральная косметика, товары для дома и декор, детские развивающие игрушки..."></textarea>
-        <div class="field-err">Расскажите немного о вашей нише</div>
+        <textarea id="inp-niche" placeholder="Например: женская одежда plus-size; натуральная косметика; товары для дома и декор; детские развивающие игрушки…"></textarea>
+        <div class="field-err">Расскажите чуть подробнее о вашей нише</div>
       </div>
     </div>
 
-    <!-- STEP 5: Количество товаров -->
+    <!-- STEP 5: Размер каталога -->
     <div class="step" data-step="5">
-      <div class="step-icon">📦</div>
+      <div class="step-eyebrow"><span>Каталог</span></div>
       <h2 class="step-title">Сколько товаров планируется?</h2>
-      <p class="step-hint">Приблизительно.</p>
+      <p class="step-hint">Ориентировочно.</p>
       <div class="cards">
-        <div class="card" data-field="products" data-value="До 50">
+        <div class="card" data-field="catalog" data-value="До 50">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">До 50</div><div class="card-desc">Небольшой фокусный ассортимент</div></div>
         </div>
-        <div class="card" data-field="products" data-value="50–200">
+        <div class="card" data-field="catalog" data-value="50–300">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">50–200</div><div class="card-desc">Средний каталог</div></div>
+          <div class="card-body"><div class="card-label">50–300</div><div class="card-desc">Средний каталог</div></div>
         </div>
-        <div class="card" data-field="products" data-value="200–1000">
+        <div class="card" data-field="catalog" data-value="300–1500">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">200–1000</div><div class="card-desc">Большой каталог</div></div>
+          <div class="card-body"><div class="card-label">300–1500</div><div class="card-desc">Большой каталог</div></div>
         </div>
-        <div class="card" data-field="products" data-value="Более 1000">
+        <div class="card" data-field="catalog" data-value="Более 1500">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">Более 1000</div><div class="card-desc">Масштабный маркетплейс</div></div>
+          <div class="card-body"><div class="card-label">Более 1500</div><div class="card-desc">Масштабный каталог</div></div>
         </div>
       </div>
     </div>
 
-    <!-- STEP 6: SEO -->
+    <!-- STEP 6: Источник товаров -->
     <div class="step" data-step="6">
-      <div class="step-icon">🔍</div>
-      <h2 class="step-title">Нужно SEO-продвижение?</h2>
-      <p class="step-hint">Органический трафик из поисковых систем.</p>
+      <div class="step-eyebrow"><span>Товары</span></div>
+      <h2 class="step-title">Как загрузить товары?</h2>
+      <p class="step-hint">От источника зависит способ наполнения и&nbsp;сроки.</p>
       <div class="cards">
-        <div class="card" data-field="seo" data-value="Да, хотим SEO-продвижение">
+        <div class="card" data-field="productSource" data-value="Файл Excel/CSV">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">Да, хотим продвижение</div><div class="card-desc">Нужен трафик из поиска</div></div>
+          <div class="card-body"><div class="card-label">Файл Excel / CSV</div><div class="card-desc">Загрузим из вашей таблицы</div></div>
         </div>
-        <div class="card" data-field="seo" data-value="Пока нет, достаточно магазина">
+        <div class="card" data-field="productSource" data-value="Фид от поставщика (XML/YML)">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">Пока нет</div><div class="card-desc">Достаточно запустить магазин</div></div>
+          <div class="card-body"><div class="card-label">Фид от поставщика</div><div class="card-desc">XML / YML выгрузка</div></div>
         </div>
-        <div class="card" data-field="seo" data-value="Обсудим на звонке">
+        <div class="card" data-field="productSource" data-value="Из 1С / складской системы">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">Расскажите подробнее</div><div class="card-desc">Обсудим на звонке</div></div>
+          <div class="card-body"><div class="card-label">Из 1С / складской системы</div></div>
+        </div>
+        <div class="card" data-field="productSource" data-value="Перенос со старого сайта">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Со старого сайта</div><div class="card-desc">Перенесём существующий каталог</div></div>
+        </div>
+        <div class="card" data-field="productSource" data-value="Нужна помощь с загрузкой">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Нужна помощь</div><div class="card-desc">Подскажем оптимальный способ</div></div>
         </div>
       </div>
     </div>
 
-    <!-- STEP 7: Бюджет -->
+    <!-- STEP 7: Контент и бренд -->
     <div class="step" data-step="7">
-      <div class="step-icon">💰</div>
+      <div class="step-eyebrow"><span>Контент</span></div>
+      <h2 class="step-title">Контент и бренд готовы?</h2>
+      <p class="step-hint">Логотип, фирменные цвета, фото товаров, описания.</p>
+      <div class="cards">
+        <div class="card" data-field="content" data-value="Всё готово">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Всё готово</div><div class="card-desc">Лого, фото и тексты на руках</div></div>
+        </div>
+        <div class="card" data-field="content" data-value="Частично готово">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Частично</div><div class="card-desc">Часть материалов есть</div></div>
+        </div>
+        <div class="card" data-field="content" data-value="Нужна помощь с контентом">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Нужна помощь</div><div class="card-desc">Поможем с фото, текстами и лого</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 8: Шаблон / дизайн -->
+    <div class="step" data-step="8">
+      <div class="step-eyebrow"><span>Дизайн</span></div>
+      <h2 class="step-title">Какой шаблон нужен?</h2>
+      <p class="step-hint">Хорошоп работает на готовых шаблонах — настроим под&nbsp;вас.</p>
+      <div class="cards">
+        <div class="card" data-field="design" data-value="Стандартный шаблон">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Стандартный шаблон</div><div class="card-desc">Настроим типовой шаблон Хорошоп</div></div>
+        </div>
+        <div class="card" data-field="design" data-value="Шаблон с адаптацией под бренд">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Шаблон под бренд</div><div class="card-desc">Подберём и адаптируем: лого, цвета, блоки</div></div>
+        </div>
+        <div class="card" data-field="design" data-value="Помогите выбрать шаблон">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Помогите выбрать</div><div class="card-desc">Подскажем подходящий шаблон</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 9: Интеграции (мультивыбор) -->
+    <div class="step" data-step="9">
+      <div class="step-eyebrow"><span>Интеграции</span></div>
+      <h2 class="step-title">Что подключить к&nbsp;магазину?</h2>
+      <p class="step-hint">Можно выбрать несколько пунктов или просто нажать «Продолжить».</p>
+      <div class="cards multi">
+        <div class="card" data-field="integrations" data-value="Оплата онлайн (LiqPay, Mono, WayForPay)">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Оплата онлайн</div><div class="card-desc">LiqPay, Mono, WayForPay</div></div>
+        </div>
+        <div class="card" data-field="integrations" data-value="Доставка (Нова Пошта, Укрпошта)">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Доставка</div><div class="card-desc">Нова Пошта, Укрпошта</div></div>
+        </div>
+        <div class="card" data-field="integrations" data-value="1С / складская система">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">1С / складская система</div></div>
+        </div>
+        <div class="card" data-field="integrations" data-value="Маркетплейсы (Rozetka, Prom)">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Маркетплейсы</div><div class="card-desc">Rozetka, Prom</div></div>
+        </div>
+        <div class="card" data-field="integrations" data-value="CRM">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">CRM</div></div>
+        </div>
+        <div class="card" data-field="integrations" data-value="Аналитика (GA4, Meta Pixel)">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Аналитика</div><div class="card-desc">GA4, Meta Pixel</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 10: Доп. услуги (мультивыбор) -->
+    <div class="step" data-step="10">
+      <div class="step-eyebrow"><span>Продвижение</span></div>
+      <h2 class="step-title">Нужны услуги помимо&nbsp;сайта?</h2>
+      <p class="step-hint">Можно выбрать несколько пунктов или просто нажать «Продолжить».</p>
+      <div class="cards multi">
+        <div class="card" data-field="services" data-value="SEO-продвижение">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">SEO-продвижение</div><div class="card-desc">Трафик из поиска</div></div>
+        </div>
+        <div class="card" data-field="services" data-value="Google Ads">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Google Ads</div></div>
+        </div>
+        <div class="card" data-field="services" data-value="Meta Ads">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Meta Ads</div><div class="card-desc">Facebook и Instagram</div></div>
+        </div>
+        <div class="card" data-field="services" data-value="Наполнение каталога">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Наполнение каталога</div><div class="card-desc">Загрузим товары за вас</div></div>
+        </div>
+        <div class="card" data-field="services" data-value="Копирайтинг">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Копирайтинг</div><div class="card-desc">Тексты для товаров и страниц</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 11: Бюджет -->
+    <div class="step" data-step="11">
+      <div class="step-eyebrow"><span>Бюджет</span></div>
       <h2 class="step-title">Бюджет на создание магазина?</h2>
       <p class="step-hint">Ориентировочно, без учёта ежемесячной подписки Хорошоп.</p>
       <div class="cards">
@@ -838,13 +1168,13 @@ body {
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">До $500</div></div>
         </div>
-        <div class="card" data-field="budget" data-value="$500–$1 000">
+        <div class="card" data-field="budget" data-value="$500 – $1 000">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">$500–$1 000</div></div>
+          <div class="card-body"><div class="card-label">$500 – $1 000</div></div>
         </div>
-        <div class="card" data-field="budget" data-value="$1 000–$2 000">
+        <div class="card" data-field="budget" data-value="$1 000 – $2 000">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">$1 000–$2 000</div></div>
+          <div class="card-body"><div class="card-label">$1 000 – $2 000</div></div>
         </div>
         <div class="card" data-field="budget" data-value="Обсудим на встрече">
           <div class="card-radio"></div>
@@ -853,35 +1183,39 @@ body {
       </div>
     </div>
 
-    <!-- STEP 8: Срок -->
-    <div class="step" data-step="8">
-      <div class="step-icon">📅</div>
-      <h2 class="step-title">Когда хотите запустить?</h2>
-      <p class="step-hint">Это поможет нам правильно расставить приоритеты.</p>
+    <!-- STEP 12: Сроки -->
+    <div class="step" data-step="12">
+      <div class="step-eyebrow"><span>Сроки</span></div>
+      <h2 class="step-title">Когда планируете запуск?</h2>
+      <p class="step-hint">Поможет правильно расставить приоритеты.</p>
       <div class="cards">
         <div class="card" data-field="deadline" data-value="Как можно скорее">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">Как можно скорее</div><div class="card-desc">Срочно, готовы начать сразу</div></div>
+          <div class="card-body"><div class="card-label">Как можно скорее</div><div class="card-desc">Готовы начать сразу</div></div>
         </div>
-        <div class="card" data-field="deadline" data-value="1–2 месяца">
+        <div class="card" data-field="deadline" data-value="В течение 1–2 месяцев">
           <div class="card-radio"></div>
           <div class="card-body"><div class="card-label">В течение 1–2 месяцев</div></div>
         </div>
-        <div class="card" data-field="deadline" data-value="Пока не определился">
+        <div class="card" data-field="deadline" data-value="Через 2–3 месяца">
           <div class="card-radio"></div>
-          <div class="card-body"><div class="card-label">Пока не определился</div><div class="card-desc">Изучаю возможности</div></div>
+          <div class="card-body"><div class="card-label">Через 2–3 месяца</div></div>
+        </div>
+        <div class="card" data-field="deadline" data-value="Пока изучаю, без конкретных сроков">
+          <div class="card-radio"></div>
+          <div class="card-body"><div class="card-label">Пока изучаю</div><div class="card-desc">Конкретных сроков нет</div></div>
         </div>
       </div>
     </div>
 
-    <!-- STEP 9: Финал -->
-    <div class="step" data-step="9">
-      <div class="step-icon">✍️</div>
+    <!-- STEP 13: Детали -->
+    <div class="step" data-step="13">
+      <div class="step-eyebrow"><span>Детали</span></div>
       <h2 class="step-title">Что ещё важно&nbsp;учесть?</h2>
-      <p class="step-hint">Особые пожелания, вопросы или важные детали. <b>Необязательно.</b></p>
+      <p class="step-hint">Домен, языки сайта, аккаунт Хорошоп, референсы. <b>Необязательно.</b></p>
       <div class="field">
         <label>Комментарий</label>
-        <textarea id="inp-comment" placeholder="Например: есть готовый дизайн, нужна интеграция с 1С, важна скорость загрузки..." style="min-height:130px;"></textarea>
+        <textarea id="inp-comment" placeholder="Например: есть домен и логотип; нужны украинская и русская версии; уже есть аккаунт Хорошоп; нравится магазин-референс…" style="min-height:130px;"></textarea>
       </div>
     </div>
 
@@ -900,16 +1234,17 @@ body {
 <div id="success-screen">
   <div class="success-icon">
     <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <path d="M6 16L13 23L26 9" stroke="#F8F7F4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M6 16L13 23L26 9" stroke="#C8A84B" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
   </div>
+  <div class="success-eyebrow"><span>Заявка принята</span></div>
   <h2 class="success-title">Спасибо за&nbsp;доверие.</h2>
   <p class="success-text">Мы внимательно изучим информацию о вашем проекте и свяжемся с вами в течение одного рабочего дня.</p>
   <ul class="success-list">
-    <li><span class="check-mark">✓</span><span>Изучим ваш бизнес и ассортимент.</span></li>
-    <li><span class="check-mark">✓</span><span>Оценим объём работ и сроки.</span></li>
-    <li><span class="check-mark">✓</span><span>Подготовим рекомендации по запуску.</span></li>
-    <li><span class="check-mark">✓</span><span>Свяжемся с вами для обсуждения деталей.</span></li>
+    <li><span class="success-tick" aria-hidden="true"></span><span>Изучим ваш бизнес и ассортимент.</span></li>
+    <li><span class="success-tick" aria-hidden="true"></span><span>Оценим объём работ и сроки.</span></li>
+    <li><span class="success-tick" aria-hidden="true"></span><span>Подготовим рекомендации по запуску.</span></li>
+    <li><span class="success-tick" aria-hidden="true"></span><span>Свяжемся с вами для обсуждения деталей.</span></li>
   </ul>
   <p class="success-footnote">Каждый проект рассматривается индивидуально.</p>
   <button class="btn-return" id="btn-return">Вернуться на главную</button>
@@ -921,33 +1256,49 @@ body {
    КОНФИГУРАЦИЯ — замените значения перед запуском
    ───────────────────────────────────────────────────────────── */
 const CONFIG = {
+  // ─────────────────────────────────────────────────────────────
+  // ВАРИАНТ А (рекомендуется): отправка через ваш бэкенд.
+  // Токен не виден в коде, нет проблем с CORS. См. файл api/lead.js.
+  SUBMIT_ENDPOINT: '',                 // напр. 'https://your-app.vercel.app/api/lead'
+
+  // ВАРИАНТ Б (быстро, но токен виден в исходнике страницы):
+  // прямая отправка в Telegram. Работает только на реальном https-домене.
   TELEGRAM_BOT_TOKEN: 'YOUR_BOT_TOKEN_HERE',
   TELEGRAM_CHAT_ID:   'YOUR_CHAT_ID_HERE',
-  // Опционально: если хотите дублировать на email через сторонний сервис
-  // EMAIL_ENDPOINT: 'https://your-endpoint.vercel.app/api/submit',
+
+  // Запасной контакт: если отправка не удалась, предложим написать письмом.
+  FALLBACK_EMAIL: '',                  // напр. 'hello@mc-studio.com'
 };
 /* ─────────────────────────────────────────────────────────────
    КОНФИГУРАЦИЯ КОНЕЦ
    ───────────────────────────────────────────────────────────── */
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 13;
 let currentStep  = 1;
 let isSubmitting = false;
 
 // Хранилище данных формы
 const formData = {
   name: '', company: '',
-  phone: '', email: '', telegram: '',
+  phone: '', email: '',
+  projectType: '',
   niche: '',
-  products: '', seo: '', budget: '', deadline: '',
+  catalog: '',
+  productSource: '',
+  content: '',
+  design: '',
+  integrations: [],
+  services: [],
+  budget: '', deadline: '',
   comment: ''
 };
 
-// Шаги с выбором карточек (single-select, auto-advance)
-const CARD_STEPS = { 5: 'products', 6: 'seo', 7: 'budget', 8: 'deadline' };
-
-// Шаг с возможностью пропуска
-const SKIP_STEPS = new Set([3]);
+// Шаги с одиночным выбором карточки (обязательные)
+const CARD_STEPS = { 3: 'projectType', 5: 'catalog', 6: 'productSource', 7: 'content', 8: 'design', 11: 'budget', 12: 'deadline' };
+// Шаги с множественным выбором (необязательные)
+const MULTI_STEPS = { 9: 'integrations', 10: 'services' };
+// Шаги, которые можно пропустить
+const SKIP_STEPS = new Set();
 
 // ── OPEN / CLOSE ────────────────────────────────────────────
 function openForm() {
@@ -969,11 +1320,12 @@ function returnHome() {
   document.body.style.overflow = '';
   // Reset form
   currentStep = 1;
-  Object.keys(formData).forEach(k => formData[k] = '');
+  Object.keys(formData).forEach(k => { formData[k] = Array.isArray(formData[k]) ? [] : ''; });
   document.querySelectorAll('.card.selected').forEach(c => c.classList.remove('selected'));
   document.querySelectorAll('.field.has-error').forEach(f => f.classList.remove('has-error'));
-  ['inp-name','inp-company','inp-phone','inp-email','inp-telegram','inp-niche','inp-comment']
-    .forEach(id => { const el = document.getElementById(id); if(el) el.value = ''; });
+  ['inp-name','inp-company','inp-phone','inp-email','inp-niche','inp-comment']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  updatePhoneMeter();
   showStep(1, 'none');
   updateUI();
 }
@@ -994,7 +1346,6 @@ function nextStep() {
   showStep(next, 'forward');
   currentStep = next;
   updateUI();
-  // Scroll to top of steps container
   document.getElementById('steps-wrap').scrollTop = 0;
 }
 
@@ -1008,7 +1359,8 @@ function prevStep() {
 }
 
 function skipStep() {
-  formData[getFieldForStep(currentStep)] = '';
+  const field = getFieldForStep(currentStep);
+  if (field) formData[field] = Array.isArray(formData[field]) ? [] : '';
   const next = currentStep + 1;
   showStep(next, 'forward');
   currentStep = next;
@@ -1017,62 +1369,70 @@ function skipStep() {
 }
 
 function getFieldForStep(step) {
-  const map = { 3: 'telegram' };
-  return map[step] || null;
+  return MULTI_STEPS[step] || null;
 }
 
 // ── SHOW STEP ────────────────────────────────────────────────
 function showStep(target, direction) {
-  const steps = document.querySelectorAll('.step');
   const current = document.querySelector('.step.active');
-
-  if (current) {
-    current.classList.remove('active');
-    current.classList.add(direction === 'back' ? 'exit-right' : 'exit-left');
-    setTimeout(() => {
-      current.classList.remove('exit-left', 'exit-right');
-    }, 300);
-  }
-
   const next = document.querySelector(`.step[data-step="${target}"]`);
-  if (next) {
-    // Set initial position based on direction
-    if (direction === 'back') {
-      next.style.transform = 'translateX(-42px)';
-    } else if (direction === 'forward') {
-      next.style.transform = 'translateX(42px)';
-    } else {
-      next.style.transform = 'translateX(0)';
+  if (!next) return;
+
+  // Clear leftover animation classes from any fast previous tap
+  document.querySelectorAll('.step').forEach(st => {
+    if (st !== current && st !== next) {
+      st.classList.remove('active','turn-out-fwd','turn-in-fwd','turn-in-back','turn-out-back');
     }
-    next.style.opacity = '0';
-    next.style.position = 'absolute';
+  });
 
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        next.classList.add('active');
-        next.style.transform = '';
-        next.style.opacity = '';
-        next.style.position = '';
-      });
-    });
+  if (next === current) return;
+
+  // First render / reset — no flip
+  if (direction === 'none' || !current) {
+    if (current) current.classList.remove('active','turn-out-fwd','turn-in-fwd','turn-in-back','turn-out-back');
+    next.classList.remove('turn-out-fwd','turn-in-fwd','turn-in-back','turn-out-back');
+    next.classList.add('active');
+    return;
   }
-}
 
-// Добавляем стиль exit-right
-(function() {
-  const style = document.createElement('style');
-  style.textContent = '.step.exit-right { opacity:0; transform:translateX(42px); pointer-events:none; position:absolute; top:0; left:0; width:100%; transition: opacity 0.28s ease, transform 0.28s ease; }';
-  document.head.appendChild(style);
-})();
+  const back = direction === 'back';
+
+  // Incoming becomes the live page (in flow); outgoing becomes an absolute overlay
+  next.classList.remove('turn-out-fwd','turn-in-fwd','turn-in-back','turn-out-back');
+  next.classList.add('active');
+  current.classList.remove('active');
+
+  if (back) {
+    next.classList.add('turn-in-back');      // previous page lays back down
+    current.classList.add('turn-out-back');  // current fades beneath
+  } else {
+    current.classList.add('turn-out-fwd');   // current turns away on top
+    next.classList.add('turn-in-fwd');       // next revealed beneath
+  }
+
+  let done = false;
+  const cleanup = () => {
+    if (done) return;
+    done = true;
+    current.classList.remove('turn-out-fwd','turn-out-back');
+    next.classList.remove('turn-in-fwd','turn-in-back');
+  };
+  next.addEventListener('animationend', cleanup, { once: true });
+  setTimeout(cleanup, 860);
+}
 
 // ── UPDATE UI ────────────────────────────────────────────────
 function updateUI() {
   // Counter
-  document.getElementById('step-counter').textContent = `Шаг ${currentStep} из ${TOTAL_STEPS}`;
+  document.getElementById('step-counter').textContent = `${String(currentStep).padStart(2,'0')} / ${String(TOTAL_STEPS).padStart(2,'0')}`;
 
-  // Progress
-  const pct = Math.round((currentStep - 1) / (TOTAL_STEPS - 1) * 100);
-  document.getElementById('progress-fill').style.width = Math.max(8, pct) + '%';
+  // Step indicator (segments)
+  buildStepper();
+  document.querySelectorAll('#stepper .seg').forEach(seg => {
+    const i = parseInt(seg.dataset.idx, 10);
+    seg.classList.toggle('done', i < currentStep);
+    seg.classList.toggle('current', i === currentStep);
+  });
 
   // Back button
   const backBtn = document.getElementById('btn-back');
@@ -1086,33 +1446,80 @@ function updateUI() {
   const skipLink = document.getElementById('skip-link');
   skipLink.style.display = SKIP_STEPS.has(currentStep) ? 'block' : 'none';
 
-  // Button disabled state for card steps
+  // Button disabled state — only required single-select steps gate the button
   if (CARD_STEPS[currentStep]) {
-    const field = CARD_STEPS[currentStep];
-    btnNext.disabled = !formData[field];
+    btnNext.disabled = !formData[CARD_STEPS[currentStep]];
   } else {
     btnNext.disabled = false;
   }
+}
+
+// ── STEP INDICATOR ───────────────────────────────────────────
+function buildStepper() {
+  const el = document.getElementById('stepper');
+  if (!el || el.childElementCount) return;
+  for (let i = 1; i <= TOTAL_STEPS; i++) {
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.dataset.idx = i;
+    el.appendChild(seg);
+  }
+}
+
+// ── LIVE PHONE METER ─────────────────────────────────────────
+function pluralDigits(n) {
+  const m100 = n % 100, m10 = n % 10;
+  if (m100 >= 11 && m100 <= 14) return 'цифр';
+  if (m10 === 1) return 'цифра';
+  if (m10 >= 2 && m10 <= 4) return 'цифры';
+  return 'цифр';
+}
+function buildPhoneMeter() {
+  const pips = document.querySelector('#phone-meter .pips');
+  if (!pips || pips.childElementCount) return;
+  for (let i = 0; i < 12; i++) {
+    const pip = document.createElement('span');
+    pip.className = 'pip';
+    pips.appendChild(pip);
+  }
+}
+function updatePhoneMeter() {
+  const el = document.getElementById('inp-phone');
+  const meter = document.getElementById('phone-meter');
+  if (!el || !meter) return;
+  const digits = (el.value.match(/\d/g) || []).length;
+  meter.querySelectorAll('.pip').forEach((pip, i) => pip.classList.toggle('on', i < digits));
+  const valid = digits >= 10 && digits <= 15;
+  meter.classList.toggle('valid', valid);
+  meter.classList.toggle('over', digits > 15);
+  const count = meter.querySelector('.phone-count');
+  const label = meter.querySelector('.phone-count-label');
+  if (count) count.textContent = digits;
+  if (label) label.textContent = pluralDigits(digits);
 }
 
 // ── CARD SELECTION ───────────────────────────────────────────
 function selectCard(card) {
   const field = card.getAttribute('data-field');
   const value = card.getAttribute('data-value');
+  const container = card.closest('.cards');
+  const isMulti = container && container.classList.contains('multi');
 
-  // Deselect siblings
-  card.closest('.cards').querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
-  card.classList.add('selected');
-
-  formData[field] = value;
-  updateUI();
-
-  // Auto-advance after short delay
-  setTimeout(() => {
-    if (currentStep < TOTAL_STEPS) {
-      nextStep();
-    }
-  }, 380);
+  if (isMulti) {
+    // Toggle, keep all chosen values as an array — no auto-advance
+    card.classList.toggle('selected');
+    const chosen = Array.from(container.querySelectorAll('.card.selected'))
+      .map(c => c.getAttribute('data-value'));
+    formData[field] = chosen;
+    updateUI();
+  } else {
+    // Single select — record choice and enable the button.
+    // The user advances themselves by pressing «Продолжить».
+    container.querySelectorAll('.card').forEach(c => c.classList.remove('selected'));
+    card.classList.add('selected');
+    formData[field] = value;
+    updateUI();
+  }
 }
 
 // ── VALIDATION ───────────────────────────────────────────────
@@ -1131,12 +1538,14 @@ function validateStep(step) {
   }
 
   if (step === 2) {
-    const phone = document.getElementById('inp-phone').value.trim();
+    const phone = document.getElementById('inp-phone').value;
     const email = document.getElementById('inp-email').value.trim();
     const phoneField = document.getElementById('f-phone');
     const emailField = document.getElementById('f-email');
 
-    const phoneOk = /\+?[\d\s\-\(\)]{10,}/.test(phone.replace(/\s/g,''));
+    // Count digits only: 10–15 covers local and international formats
+    const digits = phone.replace(/\D/g, '');
+    const phoneOk = digits.length >= 10 && digits.length <= 15;
     if (!phoneOk) { phoneField.classList.add('has-error'); valid = false; }
     else { phoneField.classList.remove('has-error'); }
 
@@ -1152,7 +1561,7 @@ function validateStep(step) {
     else { nicheField.classList.remove('has-error'); }
   }
 
-  // Card steps
+  // Required single-select card steps
   if (CARD_STEPS[step] && !formData[CARD_STEPS[step]]) {
     valid = false;
   }
@@ -1163,14 +1572,25 @@ function validateStep(step) {
 // ── COLLECT DATA ─────────────────────────────────────────────
 function collectStep(step) {
   const get = id => (document.getElementById(id) || {}).value || '';
-  if (step === 1) { formData.name = get('inp-name').trim(); formData.company = get('inp-company').trim(); }
-  if (step === 2) { formData.phone = get('inp-phone').trim(); formData.email = get('inp-email').trim(); }
-  if (step === 3) { formData.telegram = get('inp-telegram').trim(); }
-  if (step === 4) { formData.niche = get('inp-niche').trim(); }
-  if (step === 9) { formData.comment = get('inp-comment').trim(); }
+  if (step === 1)  { formData.name = get('inp-name').trim(); formData.company = get('inp-company').trim(); }
+  if (step === 2)  { formData.phone = get('inp-phone').trim(); formData.email = get('inp-email').trim(); }
+  if (step === 4)  { formData.niche = get('inp-niche').trim(); }
+  if (step === 13) { formData.comment = get('inp-comment').trim(); }
 }
 
 // ── FORMAT MESSAGE ────────────────────────────────────────────
+function formatPlain() {
+  const d = formData;
+  const L = (k, v) => v ? `${k}: ${v}\n` : '';
+  const list = a => (a && a.length) ? a.join(', ') : '';
+  return 'Новая заявка МС\n\n' +
+    L('Компания', d.company) + L('Контакт', d.name) + L('Телефон', d.phone) + L('Email', d.email) +
+    L('Задача', d.projectType) + L('Ниша', d.niche) + L('Каталог', d.catalog) + L('Источник', d.productSource) +
+    L('Контент', d.content) + L('Дизайн', d.design) + L('Интеграции', list(d.integrations)) +
+    L('Доп. услуги', list(d.services)) + L('Бюджет', d.budget) + L('Запуск', d.deadline) +
+    (d.comment ? `\nКомментарий:\n${d.comment}\n` : '');
+}
+
 function formatMessage() {
   const d = formData;
   const now = new Date();
@@ -1180,75 +1600,116 @@ function formatMessage() {
     hour: '2-digit', minute: '2-digit'
   });
 
-  const line = (label, value) => value ? `<b>${label}:</b> ${value}\n` : '';
+  const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const line = (label, value) => value ? `<b>${label}:</b> ${esc(value)}\n` : '';
+  const list = arr => (arr && arr.length) ? esc(arr.join(', ')) : '';
 
   return `🆕 <b>Новая заявка МС</b>\n\n` +
-    line('Компания',  d.company || '—') +
-    line('Контакт',   d.name) +
-    line('Телефон',   d.phone) +
-    line('Telegram',  d.telegram || '—') +
-    line('Email',     d.email) +
+    line('Компания',     d.company || '—') +
+    line('Контакт',      d.name) +
+    line('Телефон',      d.phone) +
+    line('Email',        d.email) +
     `\n` +
-    line('Ниша',      d.niche) +
-    line('Товаров',   d.products) +
-    line('SEO',       d.seo) +
-    line('Бюджет',    d.budget) +
-    line('Запуск',    d.deadline) +
-    (d.comment ? `\n<b>Комментарий:</b>\n${d.comment}\n` : '') +
+    line('Задача',       d.projectType) +
+    line('Ниша',         d.niche) +
+    line('Каталог',      d.catalog) +
+    line('Источник',     d.productSource) +
+    line('Контент',      d.content) +
+    line('Дизайн',       d.design) +
+    line('Интеграции',   list(d.integrations)) +
+    line('Доп. услуги',  list(d.services)) +
+    line('Бюджет',       d.budget) +
+    line('Запуск',       d.deadline) +
+    (d.comment ? `\n<b>Комментарий:</b>\n${esc(d.comment)}\n` : '') +
     `\n<i>Отправлено: ${dt}</i>`;
 }
 
 // ── SUBMIT ────────────────────────────────────────────────────
 async function submitForm() {
   if (isSubmitting) return;
-  collectStep(9);
+  collectStep(13);
 
   isSubmitting = true;
   const btn = document.getElementById('btn-next');
   btn.classList.add('loading');
   btn.disabled = true;
 
+  const showSuccess = () => {
+    document.getElementById('form-overlay').classList.remove('active');
+    document.getElementById('success-screen').classList.add('active');
+  };
+  const fail = (msg) => {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+    if (CONFIG.FALLBACK_EMAIL &&
+        confirm(msg + '\n\nОткрыть письмо с вашими данными, чтобы отправить напрямую?')) {
+      const subj = encodeURIComponent('Заявка с сайта МС');
+      const body = encodeURIComponent(formatPlain());
+      window.location.href = `mailto:${CONFIG.FALLBACK_EMAIL}?subject=${subj}&body=${body}`;
+    } else if (!CONFIG.FALLBACK_EMAIL) {
+      alert(msg);
+    }
+  };
+
   try {
-    const text = formatMessage();
+    const html = formatMessage();
+
+    // ── Вариант А: свой бэкенд ──
+    if (CONFIG.SUBMIT_ENDPOINT) {
+      const res = await fetch(CONFIG.SUBMIT_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lead: formData, text: html })
+      });
+      if (!res.ok) throw new Error('Сервер вернул статус ' + res.status);
+      showSuccess();
+      return;
+    }
+
+    // ── Вариант Б: напрямую в Telegram ──
+    const tokenReady = CONFIG.TELEGRAM_BOT_TOKEN && CONFIG.TELEGRAM_BOT_TOKEN.indexOf('YOUR_') === -1;
+    const chatReady  = CONFIG.TELEGRAM_CHAT_ID  && String(CONFIG.TELEGRAM_CHAT_ID).indexOf('YOUR_') === -1;
+    if (!tokenReady || !chatReady) {
+      throw new Error('Форма ещё не подключена. Укажите SUBMIT_ENDPOINT или реальные TELEGRAM_BOT_TOKEN и TELEGRAM_CHAT_ID в объекте CONFIG.');
+    }
 
     const res = await fetch(
       `https://api.telegram.org/bot${CONFIG.TELEGRAM_BOT_TOKEN}/sendMessage`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chat_id: CONFIG.TELEGRAM_CHAT_ID,
-          text: text,
-          parse_mode: 'HTML'
-        })
+        body: JSON.stringify({ chat_id: CONFIG.TELEGRAM_CHAT_ID, text: html, parse_mode: 'HTML' })
       }
     );
-
-    if (!res.ok) throw new Error(`Telegram error: ${res.status}`);
-
-    // SUCCESS
-    document.getElementById('form-overlay').classList.remove('active');
-    const successEl = document.getElementById('success-screen');
-    successEl.classList.add('active');
+    if (!res.ok) {
+      let detail = res.status;
+      try { const j = await res.json(); if (j && j.description) detail += ' — ' + j.description; } catch (e) {}
+      throw new Error('Telegram отклонил запрос (' + detail + ').');
+    }
+    showSuccess();
 
   } catch (err) {
     console.error('Submit error:', err);
-    // Show error but still show success to user (don't lose the lead feel)
-    // In production: also send to a fallback endpoint
-    alert('Ошибка при отправке. Пожалуйста, напишите нам напрямую.');
-    btn.classList.remove('loading');
-    btn.disabled = false;
+    const networkErr = (err instanceof TypeError) || /Failed to fetch|NetworkError|ERR_/i.test(err.message || '');
+    fail(networkErr
+      ? 'Не удалось связаться с сервером. Убедитесь, что сайт открыт по адресу https:// (не из файла и не в окне предпросмотра) и что форма подключена.'
+      : ('Не получилось отправить заявку. ' + (err.message || '')));
   } finally {
     isSubmitting = false;
   }
 }
+
 
 // ── EVENT LISTENERS ─────────────────────────────────────────
 function initLanding() {
 
   // Hero open button
   var btnOpen = document.getElementById('btn-open-form');
-  if (btnOpen) btnOpen.addEventListener('click', openForm);
+  if (btnOpen && !btnOpen.dataset.bound) {
+    btnOpen.addEventListener('click', openForm);
+    btnOpen.onclick = openForm;
+    btnOpen.dataset.bound = '1';
+  }
 
   // Close button
   var btnClose = document.getElementById('btn-close-form');
@@ -1296,16 +1757,45 @@ function initLanding() {
     }
   });
 
+  // Build dynamic indicators + live phone meter
+  buildStepper();
+  buildPhoneMeter();
+  updatePhoneMeter();
+  var phoneEl = document.getElementById('inp-phone');
+  if (phoneEl) phoneEl.addEventListener('input', updatePhoneMeter);
+
   // Initial UI state
   updateUI();
 }
 
-// Запускаем сразу если DOM готов, иначе ждём
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initLanding);
-} else {
-  initLanding();
+// Экспортируем функции в глобальную область (на случай sandbox/module-режима)
+window.openForm = openForm;
+window.closeForm = closeForm;
+window.nextStep = nextStep;
+window.prevStep = prevStep;
+window.skipStep = skipStep;
+window.selectCard = selectCard;
+window.returnHome = returnHome;
+
+// Запускаем инициализацию максимально надёжно
+function bootLanding() {
+  try { initLanding(); } catch (e) { console.error('init error', e); }
 }
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootLanding);
+} else {
+  // DOM уже готов
+  bootLanding();
+}
+// Доп. страховка — повторный запуск после полной загрузки
+window.addEventListener('load', function() {
+  // Если форма не инициализирована повторно навешиваем
+  var btn = document.getElementById('btn-open-form');
+  if (btn && !btn.dataset.bound) {
+    bootLanding();
+  }
+});
 </script>
 </body>
 </html>
