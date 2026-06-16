@@ -470,56 +470,52 @@ body {
 .field.has-error textarea { border-color: rgba(217,139,110,0.6); background: rgba(217,139,110,0.07); }
 .field.has-error .field-err { display: block; }
 
-/* ── LIVE PHONE DIGIT METER ── */
-.phone-meter {
+/* ── PHONE: маска + оператор + зелёное состояние «номер верный» ── */
+.phone-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: 10px;
   padding: 0 2px;
+  min-height: 16px;
 }
-.phone-meter .pips { display: flex; gap: 4px; }
-.phone-meter .pip {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.13);
-  transition: background 0.18s ease;
-}
-.phone-meter .pip.on { background: rgba(200,168,75,0.8); animation: pipPop 0.22s ease; }
-.phone-meter.valid .pip.on { background: #C8A84B; }
-.phone-meter.over .pip.on { background: #D98B6E; }
-@keyframes pipPop { 0% { transform: scale(0.5); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
-.phone-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.phone-operator {
   font-family: 'Inter', sans-serif;
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: rgba(248,247,244,0.4);
-  white-space: nowrap;
-  transition: color 0.2s ease;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: rgba(248,247,244,0.5);
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
-.phone-meter.valid .phone-status { color: rgba(200,168,75,0.9); }
-.phone-meter.over .phone-status { color: #D98B6E; }
-.phone-status .phone-count { font-weight: 600; font-variant-numeric: tabular-nums; }
+.phone-operator.show { opacity: 1; transform: none; }
+.phone-operator.ok { color: #4FBE8E; }
+.phone-operator.warn { color: #D98B6E; }
 .phone-check {
   position: relative;
-  width: 13px; height: 13px;
-  opacity: 0; transform: scale(0.5);
+  width: 16px; height: 16px;
+  flex-shrink: 0;
+  opacity: 0;
+  transform: scale(0.5);
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
-.phone-meter.valid .phone-check { opacity: 1; transform: scale(1); }
 .phone-check::after {
   content: '';
   position: absolute;
-  left: 4px; top: 0;
-  width: 4px; height: 8px;
-  border: solid rgba(200,168,75,0.95);
-  border-width: 0 1.5px 1.5px 0;
+  left: 5px; top: 1px;
+  width: 5px; height: 9px;
+  border: solid #4FBE8E;
+  border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+}
+.phone-field.phone-valid .phone-check { opacity: 1; transform: scale(1); }
+.phone-field.phone-valid input,
+.phone-field.phone-valid input:focus {
+  border-color: rgba(79,190,142,0.7);
+  background: rgba(79,190,142,0.06);
+  box-shadow: 0 0 0 3px rgba(79,190,142,0.14), 0 0 22px rgba(79,190,142,0.16);
 }
 
 /* ── CARDS ── */
@@ -959,14 +955,14 @@ body {
       <div class="step-eyebrow"><span data-i18n="s2.eyebrow">Контакты</span></div>
       <h2 class="step-title" data-i18n="s2.title">Как с вами связаться?</h2>
       <p class="step-hint" data-i18n="s2.hint">Свяжемся удобным способом и&nbsp;пришлём оценку проекта.</p>
-      <div class="field" id="f-phone">
+      <div class="field phone-field" id="f-phone">
         <label data-i18n="s2.phone.label">Телефон</label>
-        <input type="tel" id="inp-phone" placeholder="+38 0__ ___ __ __" autocomplete="tel" inputmode="tel">
-        <div class="phone-meter" id="phone-meter">
-          <div class="pips"></div>
-          <span class="phone-status"><span class="phone-count">0</span>&nbsp;<span class="phone-count-label">цифр</span><span class="phone-check" aria-hidden="true"></span></span>
+        <input type="tel" id="inp-phone" placeholder="+38 0XX XXX XX XX" autocomplete="tel" inputmode="tel" maxlength="19">
+        <div class="phone-info" id="phone-info">
+          <span class="phone-operator" id="phone-operator"></span>
+          <span class="phone-check" id="phone-check" aria-hidden="true"></span>
         </div>
-        <div class="field-err" data-i18n="s2.phone.err">Введите номер целиком — не меньше 10 цифр</div>
+        <div class="field-err" data-i18n="s2.phone.err">Введите номер в формате +38 0XX XXX XX XX</div>
       </div>
       <div class="field" id="f-email">
         <label data-i18n="s2.email.label">Email</label>
@@ -1277,7 +1273,7 @@ const CONFIG = {
 /* ── i18n (UA / RU) ─────────────────────────────────────────── */
 var DEFAULT_LANG = 'uk';                 // язык по умолчанию для прочих браузеров
 var LANG = DEFAULT_LANG;
-var I18N = { ru: {"meta_title": "МС — Интернет-магазины на Хорошоп", "badge": "Бутиковая&nbsp;студия", "hero_eyebrow": "Запуск на Хорошоп", "hero_title": "Интернет-магазины,<br>готовые к продажам<br><em>с первого дня.</em>", "hero_sub": "Изучим ваш проект, предложим структуру и&nbsp;подготовим индивидуальный план запуска.", "hero_note": "Заполнение брифа займёт около 7&nbsp;минут.", "btn_open": "Обсудить проект", "response_note": "Ответим в течение одного рабочего дня.", "btn_continue": "Продолжить", "btn_submit": "Отправить заявку", "skip": "Пропустить", "back_title": "Назад", "close_title": "Закрыть", "s1.eyebrow": "Знакомство", "s1.title": "Расскажите о&nbsp;вашем проекте", "s1.hint": "Пара деталей, чтобы подготовиться к&nbsp;разговору предметно.", "s1.name.label": "Ваше имя", "s1.name.ph": "Как вас зовут?", "s1.name.err": "Пожалуйста, введите ваше имя", "s1.company.label": "Компания или бренд", "s1.company.ph": "Название проекта", "s2.eyebrow": "Контакты", "s2.title": "Как с вами связаться?", "s2.hint": "Свяжемся удобным способом и&nbsp;пришлём оценку проекта.", "s2.phone.label": "Телефон", "s2.phone.err": "Введите номер целиком — не меньше 10 цифр", "s2.email.label": "Email", "s2.email.err": "Проверьте формат email", "s3.eyebrow": "Задача", "s3.title": "Что нужно сделать?", "s3.hint": "От этого зависит и&nbsp;подход, и&nbsp;оценка.", "s3.c1.label": "Новый магазин с&nbsp;нуля", "s3.c1.desc": "Соберём и настроим на Хорошоп", "s3.c1.val": "Новый магазин с нуля", "s3.c2.label": "Перенос с другой платформы", "s3.c2.desc": "Prom, OpenCart, WordPress и др.", "s3.c2.val": "Перенос с другой платформы", "s3.c3.label": "Доработка действующего", "s3.c3.desc": "Магазин уже на Хорошоп", "s3.c3.val": "Доработка действующего магазина на Хорошоп", "s3.c4.label": "Пока не определился", "s3.c4.desc": "Нужна консультация", "s3.c4.val": "Нужна консультация", "s4.eyebrow": "Ниша", "s4.title": "Что вы продаёте?", "s4.hint": "Опишите ассортимент своими словами — чем подробнее, тем точнее оценка.", "s4.niche.label": "Ниша и ассортимент", "s4.niche.ph": "Например: женская одежда plus-size; натуральная косметика; товары для дома и декор; детские развивающие игрушки…", "s4.niche.err": "Расскажите чуть подробнее о вашей нише", "s5.eyebrow": "Каталог", "s5.title": "Сколько товаров планируется?", "s5.hint": "Ориентировочно.", "s5.c1.label": "До 50", "s5.c1.desc": "Небольшой фокусный ассортимент", "s5.c1.val": "До 50", "s5.c2.label": "50–300", "s5.c2.desc": "Средний каталог", "s5.c2.val": "50–300", "s5.c3.label": "300–1500", "s5.c3.desc": "Большой каталог", "s5.c3.val": "300–1500", "s5.c4.label": "Более 1500", "s5.c4.desc": "Масштабный каталог", "s5.c4.val": "Более 1500", "s6.eyebrow": "Товары", "s6.title": "Как загрузить товары?", "s6.hint": "От источника зависит способ наполнения и&nbsp;сроки.", "s6.c1.label": "Файл Excel / CSV", "s6.c1.desc": "Загрузим из вашей таблицы", "s6.c1.val": "Файл Excel/CSV", "s6.c2.label": "Фид от поставщика", "s6.c2.desc": "XML / YML выгрузка", "s6.c2.val": "Фид от поставщика (XML/YML)", "s6.c3.label": "Из 1С / складской системы", "s6.c3.val": "Из 1С / складской системы", "s6.c4.label": "Со старого сайта", "s6.c4.desc": "Перенесём существующий каталог", "s6.c4.val": "Перенос со старого сайта", "s6.c5.label": "Нужна помощь", "s6.c5.desc": "Подскажем оптимальный способ", "s6.c5.val": "Нужна помощь с загрузкой", "s7.eyebrow": "Контент", "s7.title": "Контент и бренд готовы?", "s7.hint": "Логотип, фирменные цвета, фото товаров, описания.", "s7.c1.label": "Всё готово", "s7.c1.desc": "Лого, фото и тексты на руках", "s7.c1.val": "Всё готово", "s7.c2.label": "Частично", "s7.c2.desc": "Часть материалов есть", "s7.c2.val": "Частично готово", "s7.c3.label": "Нужна помощь", "s7.c3.desc": "Поможем с фото, текстами и лого", "s7.c3.val": "Нужна помощь с контентом", "s8.eyebrow": "Дизайн", "s8.title": "Какой шаблон нужен?", "s8.hint": "Хорошоп работает на готовых шаблонах — настроим под&nbsp;вас.", "s8.c1.label": "Стандартный шаблон", "s8.c1.desc": "Настроим типовой шаблон Хорошоп", "s8.c1.val": "Стандартный шаблон", "s8.c2.label": "Шаблон под бренд", "s8.c2.desc": "Подберём и адаптируем: лого, цвета, блоки", "s8.c2.val": "Шаблон с адаптацией под бренд", "s8.c3.label": "Помогите выбрать", "s8.c3.desc": "Подскажем подходящий шаблон", "s8.c3.val": "Помогите выбрать шаблон", "s9.eyebrow": "Интеграции", "s9.title": "Что подключить к&nbsp;магазину?", "s9.hint": "Можно выбрать несколько пунктов или просто нажать «Продолжить».", "s9.c1.label": "Оплата онлайн", "s9.c1.desc": "LiqPay, Mono, WayForPay", "s9.c1.val": "Оплата онлайн (LiqPay, Mono, WayForPay)", "s9.c2.label": "Доставка", "s9.c2.desc": "Нова Пошта, Укрпошта", "s9.c2.val": "Доставка (Нова Пошта, Укрпошта)", "s9.c3.label": "1С / складская система", "s9.c3.val": "1С / складская система", "s9.c4.label": "Маркетплейсы", "s9.c4.desc": "Rozetka, Prom", "s9.c4.val": "Маркетплейсы (Rozetka, Prom)", "s9.c5.label": "CRM", "s9.c5.val": "CRM", "s9.c6.label": "Аналитика", "s9.c6.desc": "GA4, Meta Pixel", "s9.c6.val": "Аналитика (GA4, Meta Pixel)", "s10.eyebrow": "Продвижение", "s10.title": "Нужны услуги помимо&nbsp;сайта?", "s10.hint": "Можно выбрать несколько пунктов или просто нажать «Продолжить».", "s10.c1.label": "SEO-продвижение", "s10.c1.desc": "Трафик из поиска", "s10.c1.val": "SEO-продвижение", "s10.c2.label": "Google Ads", "s10.c2.val": "Google Ads", "s10.c3.label": "Meta Ads", "s10.c3.desc": "Facebook и Instagram", "s10.c3.val": "Meta Ads", "s10.c4.label": "Наполнение каталога", "s10.c4.desc": "Загрузим товары за вас", "s10.c4.val": "Наполнение каталога", "s10.c5.label": "Копирайтинг", "s10.c5.desc": "Тексты для товаров и страниц", "s10.c5.val": "Копирайтинг", "s11.eyebrow": "Бюджет", "s11.title": "Бюджет на создание магазина?", "s11.hint": "Ориентировочно, без учёта ежемесячной подписки Хорошоп.", "s11.c1.label": "До $500", "s11.c1.val": "До $500", "s11.c2.label": "$500 – $1 000", "s11.c2.val": "$500 – $1 000", "s11.c3.label": "$1 000 – $2 000", "s11.c3.val": "$1 000 – $2 000", "s11.c4.label": "Обсудим на встрече", "s11.c4.desc": "Зависит от объёма", "s11.c4.val": "Обсудим на встрече", "s12.eyebrow": "Сроки", "s12.title": "Когда планируете запуск?", "s12.hint": "Поможет правильно расставить приоритеты.", "s12.c1.label": "Как можно скорее", "s12.c1.desc": "Готовы начать сразу", "s12.c1.val": "Как можно скорее", "s12.c2.label": "В течение 1–2 месяцев", "s12.c2.val": "В течение 1–2 месяцев", "s12.c3.label": "Через 2–3 месяца", "s12.c3.val": "Через 2–3 месяца", "s12.c4.label": "Пока изучаю", "s12.c4.desc": "Конкретных сроков нет", "s12.c4.val": "Пока изучаю, без конкретных сроков", "s13.eyebrow": "Детали", "s13.title": "Что ещё важно&nbsp;учесть?", "s13.hint": "Домен, языки сайта, аккаунт Хорошоп, референсы. <b>Необязательно.</b>", "s13.comment.label": "Комментарий", "s13.comment.ph": "Например: есть домен и логотип; нужны украинская и русская версии; уже есть аккаунт Хорошоп; нравится магазин-референс…", "su.eyebrow": "Заявка принята", "su.title": "Спасибо за&nbsp;доверие.", "su.text": "Мы внимательно изучим информацию о вашем проекте и свяжемся с вами в течение одного рабочего дня.", "su.li1": "Изучим ваш бизнес и ассортимент.", "su.li2": "Оценим объём работ и сроки.", "su.li3": "Подготовим рекомендации по запуску.", "su.li4": "Свяжемся с вами для обсуждения деталей.", "su.footnote": "Каждый проект рассматривается индивидуально.", "su.btn_return": "Вернуться на главную"}, uk: {"meta_title": "МС — Інтернет-магазини на Хорошоп", "badge": "Бутикова&nbsp;студія", "hero_eyebrow": "Запуск на Хорошоп", "hero_title": "Інтернет-магазини,<br>готові до продажів<br><em>з першого дня.</em>", "hero_sub": "Вивчимо ваш проєкт, запропонуємо структуру та&nbsp;підготуємо індивідуальний план запуску.", "hero_note": "Заповнення брифу займе близько 7&nbsp;хвилин.", "btn_open": "Обговорити проєкт", "response_note": "Відповімо протягом одного робочого дня.", "btn_continue": "Продовжити", "btn_submit": "Надіслати заявку", "skip": "Пропустити", "back_title": "Назад", "close_title": "Закрити", "s1.eyebrow": "Знайомство", "s1.title": "Розкажіть про&nbsp;ваш проєкт", "s1.hint": "Кілька деталей, щоб підготуватися до&nbsp;розмови предметно.", "s1.name.label": "Ваше ім'я", "s1.name.ph": "Як вас звати?", "s1.name.err": "Будь ласка, введіть ваше ім'я", "s1.company.label": "Компанія або бренд", "s1.company.ph": "Назва проєкту", "s2.eyebrow": "Контакти", "s2.title": "Як з вами зв'язатися?", "s2.hint": "Зв'яжемося зручним способом і&nbsp;надішлемо оцінку проєкту.", "s2.phone.label": "Телефон", "s2.phone.err": "Введіть номер повністю — не менше 10 цифр", "s2.email.label": "Email", "s2.email.err": "Перевірте формат email", "s3.eyebrow": "Завдання", "s3.title": "Що потрібно зробити?", "s3.hint": "Від цього залежить і&nbsp;підхід, і&nbsp;оцінка.", "s3.c1.label": "Новий магазин з&nbsp;нуля", "s3.c1.desc": "Зберемо і налаштуємо на Хорошоп", "s3.c1.val": "Новий магазин з нуля", "s3.c2.label": "Перенесення з іншої платформи", "s3.c2.desc": "Prom, OpenCart, WordPress та ін.", "s3.c2.val": "Перенесення з іншої платформи", "s3.c3.label": "Доопрацювання чинного", "s3.c3.desc": "Магазин уже на Хорошоп", "s3.c3.val": "Доопрацювання чинного магазину на Хорошоп", "s3.c4.label": "Поки не визначився", "s3.c4.desc": "Потрібна консультація", "s3.c4.val": "Потрібна консультація", "s4.eyebrow": "Ніша", "s4.title": "Що ви продаєте?", "s4.hint": "Опишіть асортимент своїми словами — що детальніше, то точніша оцінка.", "s4.niche.label": "Ніша та асортимент", "s4.niche.ph": "Наприклад: жіночий одяг plus-size; натуральна косметика; товари для дому та декор; дитячі розвивальні іграшки…", "s4.niche.err": "Розкажіть трохи детальніше про вашу нішу", "s5.eyebrow": "Каталог", "s5.title": "Скільки товарів планується?", "s5.hint": "Орієнтовно.", "s5.c1.label": "До 50", "s5.c1.desc": "Невеликий фокусний асортимент", "s5.c1.val": "До 50", "s5.c2.label": "50–300", "s5.c2.desc": "Середній каталог", "s5.c2.val": "50–300", "s5.c3.label": "300–1500", "s5.c3.desc": "Великий каталог", "s5.c3.val": "300–1500", "s5.c4.label": "Понад 1500", "s5.c4.desc": "Масштабний каталог", "s5.c4.val": "Понад 1500", "s6.eyebrow": "Товари", "s6.title": "Як завантажити товари?", "s6.hint": "Від джерела залежить спосіб наповнення та&nbsp;строки.", "s6.c1.label": "Файл Excel / CSV", "s6.c1.desc": "Завантажимо з вашої таблиці", "s6.c1.val": "Файл Excel/CSV", "s6.c2.label": "Фід від постачальника", "s6.c2.desc": "XML / YML вивантаження", "s6.c2.val": "Фід від постачальника (XML/YML)", "s6.c3.label": "З 1С / складської системи", "s6.c3.val": "З 1С / складської системи", "s6.c4.label": "Зі старого сайту", "s6.c4.desc": "Перенесемо наявний каталог", "s6.c4.val": "Перенесення зі старого сайту", "s6.c5.label": "Потрібна допомога", "s6.c5.desc": "Підкажемо оптимальний спосіб", "s6.c5.val": "Потрібна допомога із завантаженням", "s7.eyebrow": "Контент", "s7.title": "Контент і бренд готові?", "s7.hint": "Логотип, фірмові кольори, фото товарів, описи.", "s7.c1.label": "Усе готово", "s7.c1.desc": "Лого, фото й тексти на руках", "s7.c1.val": "Усе готово", "s7.c2.label": "Частково", "s7.c2.desc": "Частина матеріалів є", "s7.c2.val": "Частково готово", "s7.c3.label": "Потрібна допомога", "s7.c3.desc": "Допоможемо з фото, текстами й лого", "s7.c3.val": "Потрібна допомога з контентом", "s8.eyebrow": "Дизайн", "s8.title": "Який шаблон потрібен?", "s8.hint": "Хорошоп працює на готових шаблонах — налаштуємо під&nbsp;вас.", "s8.c1.label": "Стандартний шаблон", "s8.c1.desc": "Налаштуємо типовий шаблон Хорошоп", "s8.c1.val": "Стандартний шаблон", "s8.c2.label": "Шаблон під бренд", "s8.c2.desc": "Підберемо та адаптуємо: лого, кольори, блоки", "s8.c2.val": "Шаблон з адаптацією під бренд", "s8.c3.label": "Допоможіть обрати", "s8.c3.desc": "Підкажемо відповідний шаблон", "s8.c3.val": "Допоможіть обрати шаблон", "s9.eyebrow": "Інтеграції", "s9.title": "Що підключити до&nbsp;магазину?", "s9.hint": "Можна обрати кілька пунктів або просто натиснути «Продовжити».", "s9.c1.label": "Оплата онлайн", "s9.c1.desc": "LiqPay, Mono, WayForPay", "s9.c1.val": "Оплата онлайн (LiqPay, Mono, WayForPay)", "s9.c2.label": "Доставка", "s9.c2.desc": "Нова Пошта, Укрпошта", "s9.c2.val": "Доставка (Нова Пошта, Укрпошта)", "s9.c3.label": "1С / складська система", "s9.c3.val": "1С / складська система", "s9.c4.label": "Маркетплейси", "s9.c4.desc": "Rozetka, Prom", "s9.c4.val": "Маркетплейси (Rozetka, Prom)", "s9.c5.label": "CRM", "s9.c5.val": "CRM", "s9.c6.label": "Аналітика", "s9.c6.desc": "GA4, Meta Pixel", "s9.c6.val": "Аналітика (GA4, Meta Pixel)", "s10.eyebrow": "Просування", "s10.title": "Потрібні послуги крім&nbsp;сайту?", "s10.hint": "Можна обрати кілька пунктів або просто натиснути «Продовжити».", "s10.c1.label": "SEO-просування", "s10.c1.desc": "Трафік із пошуку", "s10.c1.val": "SEO-просування", "s10.c2.label": "Google Ads", "s10.c2.val": "Google Ads", "s10.c3.label": "Meta Ads", "s10.c3.desc": "Facebook та Instagram", "s10.c3.val": "Meta Ads", "s10.c4.label": "Наповнення каталогу", "s10.c4.desc": "Завантажимо товари за вас", "s10.c4.val": "Наповнення каталогу", "s10.c5.label": "Копірайтинг", "s10.c5.desc": "Тексти для товарів і сторінок", "s10.c5.val": "Копірайтинг", "s11.eyebrow": "Бюджет", "s11.title": "Бюджет на створення магазину?", "s11.hint": "Орієнтовно, без урахування щомісячної підписки Хорошоп.", "s11.c1.label": "До $500", "s11.c1.val": "До $500", "s11.c2.label": "$500 – $1 000", "s11.c2.val": "$500 – $1 000", "s11.c3.label": "$1 000 – $2 000", "s11.c3.val": "$1 000 – $2 000", "s11.c4.label": "Обговоримо на зустрічі", "s11.c4.desc": "Залежить від обсягу", "s11.c4.val": "Обговоримо на зустрічі", "s12.eyebrow": "Строки", "s12.title": "Коли плануєте запуск?", "s12.hint": "Допоможе правильно розставити пріоритети.", "s12.c1.label": "Якомога швидше", "s12.c1.desc": "Готові почати одразу", "s12.c1.val": "Якомога швидше", "s12.c2.label": "Протягом 1–2 місяців", "s12.c2.val": "Протягом 1–2 місяців", "s12.c3.label": "Через 2–3 місяці", "s12.c3.val": "Через 2–3 місяці", "s12.c4.label": "Поки вивчаю", "s12.c4.desc": "Конкретних строків немає", "s12.c4.val": "Поки вивчаю, без конкретних строків", "s13.eyebrow": "Деталі", "s13.title": "Що ще важливо&nbsp;врахувати?", "s13.hint": "Домен, мови сайту, акаунт Хорошоп, референси. <b>Необов'язково.</b>", "s13.comment.label": "Коментар", "s13.comment.ph": "Наприклад: є домен і логотип; потрібні українська та російська версії; вже є акаунт Хорошоп; подобається магазин-референс…", "su.eyebrow": "Заявку прийнято", "su.title": "Дякуємо за&nbsp;довіру.", "su.text": "Ми уважно вивчимо інформацію про ваш проєкт і зв'яжемося з вами протягом одного робочого дня.", "su.li1": "Вивчимо ваш бізнес і асортимент.", "su.li2": "Оцінимо обсяг робіт і строки.", "su.li3": "Підготуємо рекомендації щодо запуску.", "su.li4": "Зв'яжемося з вами для обговорення деталей.", "su.footnote": "Кожен проєкт розглядається індивідуально.", "su.btn_return": "Повернутися на головну"} };
+var I18N = { ru: {"meta_title": "МС — Интернет-магазины на Хорошоп", "badge": "Бутиковая&nbsp;студия", "hero_eyebrow": "Запуск на Хорошоп", "hero_title": "Интернет-магазины,<br>готовые к продажам<br><em>с первого дня.</em>", "hero_sub": "Изучим ваш проект, предложим структуру и&nbsp;подготовим индивидуальный план запуска.", "hero_note": "Заполнение брифа займёт около 7&nbsp;минут.", "btn_open": "Обсудить проект", "response_note": "Ответим в течение одного рабочего дня.", "btn_continue": "Продолжить", "btn_submit": "Отправить заявку", "skip": "Пропустить", "back_title": "Назад", "close_title": "Закрыть", "s1.eyebrow": "Знакомство", "s1.title": "Расскажите о&nbsp;вашем проекте", "s1.hint": "Пара деталей, чтобы подготовиться к&nbsp;разговору предметно.", "s1.name.label": "Ваше имя", "s1.name.ph": "Как вас зовут?", "s1.name.err": "Пожалуйста, введите ваше имя", "s1.company.label": "Компания или бренд", "s1.company.ph": "Название проекта", "s2.eyebrow": "Контакты", "s2.title": "Как с вами связаться?", "s2.hint": "Свяжемся удобным способом и&nbsp;пришлём оценку проекта.", "s2.phone.label": "Телефон", "s2.phone.err": "Введите номер в формате +38 0XX XXX XX XX", "s2.email.label": "Email", "s2.email.err": "Проверьте формат email", "s3.eyebrow": "Задача", "s3.title": "Что нужно сделать?", "s3.hint": "От этого зависит и&nbsp;подход, и&nbsp;оценка.", "s3.c1.label": "Новый магазин с&nbsp;нуля", "s3.c1.desc": "Соберём и настроим на Хорошоп", "s3.c1.val": "Новый магазин с нуля", "s3.c2.label": "Перенос с другой платформы", "s3.c2.desc": "Prom, OpenCart, WordPress и др.", "s3.c2.val": "Перенос с другой платформы", "s3.c3.label": "Доработка действующего", "s3.c3.desc": "Магазин уже на Хорошоп", "s3.c3.val": "Доработка действующего магазина на Хорошоп", "s3.c4.label": "Пока не определился", "s3.c4.desc": "Нужна консультация", "s3.c4.val": "Нужна консультация", "s4.eyebrow": "Ниша", "s4.title": "Что вы продаёте?", "s4.hint": "Опишите ассортимент своими словами — чем подробнее, тем точнее оценка.", "s4.niche.label": "Ниша и ассортимент", "s4.niche.ph": "Например: женская одежда plus-size; натуральная косметика; товары для дома и декор; детские развивающие игрушки…", "s4.niche.err": "Расскажите чуть подробнее о вашей нише", "s5.eyebrow": "Каталог", "s5.title": "Сколько товаров планируется?", "s5.hint": "Ориентировочно.", "s5.c1.label": "До 50", "s5.c1.desc": "Небольшой фокусный ассортимент", "s5.c1.val": "До 50", "s5.c2.label": "50–300", "s5.c2.desc": "Средний каталог", "s5.c2.val": "50–300", "s5.c3.label": "300–1500", "s5.c3.desc": "Большой каталог", "s5.c3.val": "300–1500", "s5.c4.label": "Более 1500", "s5.c4.desc": "Масштабный каталог", "s5.c4.val": "Более 1500", "s6.eyebrow": "Товары", "s6.title": "Как загрузить товары?", "s6.hint": "От источника зависит способ наполнения и&nbsp;сроки.", "s6.c1.label": "Файл Excel / CSV", "s6.c1.desc": "Загрузим из вашей таблицы", "s6.c1.val": "Файл Excel/CSV", "s6.c2.label": "Фид от поставщика", "s6.c2.desc": "XML / YML выгрузка", "s6.c2.val": "Фид от поставщика (XML/YML)", "s6.c3.label": "Из 1С / складской системы", "s6.c3.val": "Из 1С / складской системы", "s6.c4.label": "Со старого сайта", "s6.c4.desc": "Перенесём существующий каталог", "s6.c4.val": "Перенос со старого сайта", "s6.c5.label": "Нужна помощь", "s6.c5.desc": "Подскажем оптимальный способ", "s6.c5.val": "Нужна помощь с загрузкой", "s7.eyebrow": "Контент", "s7.title": "Контент и бренд готовы?", "s7.hint": "Логотип, фирменные цвета, фото товаров, описания.", "s7.c1.label": "Всё готово", "s7.c1.desc": "Лого, фото и тексты на руках", "s7.c1.val": "Всё готово", "s7.c2.label": "Частично", "s7.c2.desc": "Часть материалов есть", "s7.c2.val": "Частично готово", "s7.c3.label": "Нужна помощь", "s7.c3.desc": "Поможем с фото, текстами и лого", "s7.c3.val": "Нужна помощь с контентом", "s8.eyebrow": "Дизайн", "s8.title": "Какой шаблон нужен?", "s8.hint": "Хорошоп работает на готовых шаблонах — настроим под&nbsp;вас.", "s8.c1.label": "Стандартный шаблон", "s8.c1.desc": "Настроим типовой шаблон Хорошоп", "s8.c1.val": "Стандартный шаблон", "s8.c2.label": "Шаблон под бренд", "s8.c2.desc": "Подберём и адаптируем: лого, цвета, блоки", "s8.c2.val": "Шаблон с адаптацией под бренд", "s8.c3.label": "Помогите выбрать", "s8.c3.desc": "Подскажем подходящий шаблон", "s8.c3.val": "Помогите выбрать шаблон", "s9.eyebrow": "Интеграции", "s9.title": "Что подключить к&nbsp;магазину?", "s9.hint": "Можно выбрать несколько пунктов или просто нажать «Продолжить».", "s9.c1.label": "Оплата онлайн", "s9.c1.desc": "LiqPay, Mono, WayForPay", "s9.c1.val": "Оплата онлайн (LiqPay, Mono, WayForPay)", "s9.c2.label": "Доставка", "s9.c2.desc": "Нова Пошта, Укрпошта", "s9.c2.val": "Доставка (Нова Пошта, Укрпошта)", "s9.c3.label": "1С / складская система", "s9.c3.val": "1С / складская система", "s9.c4.label": "Маркетплейсы", "s9.c4.desc": "Rozetka, Prom", "s9.c4.val": "Маркетплейсы (Rozetka, Prom)", "s9.c5.label": "CRM", "s9.c5.val": "CRM", "s9.c6.label": "Аналитика", "s9.c6.desc": "GA4, Meta Pixel", "s9.c6.val": "Аналитика (GA4, Meta Pixel)", "s10.eyebrow": "Продвижение", "s10.title": "Нужны услуги помимо&nbsp;сайта?", "s10.hint": "Можно выбрать несколько пунктов или просто нажать «Продолжить».", "s10.c1.label": "SEO-продвижение", "s10.c1.desc": "Трафик из поиска", "s10.c1.val": "SEO-продвижение", "s10.c2.label": "Google Ads", "s10.c2.val": "Google Ads", "s10.c3.label": "Meta Ads", "s10.c3.desc": "Facebook и Instagram", "s10.c3.val": "Meta Ads", "s10.c4.label": "Наполнение каталога", "s10.c4.desc": "Загрузим товары за вас", "s10.c4.val": "Наполнение каталога", "s10.c5.label": "Копирайтинг", "s10.c5.desc": "Тексты для товаров и страниц", "s10.c5.val": "Копирайтинг", "s11.eyebrow": "Бюджет", "s11.title": "Бюджет на создание магазина?", "s11.hint": "Ориентировочно, без учёта ежемесячной подписки Хорошоп.", "s11.c1.label": "До $500", "s11.c1.val": "До $500", "s11.c2.label": "$500 – $1 000", "s11.c2.val": "$500 – $1 000", "s11.c3.label": "$1 000 – $2 000", "s11.c3.val": "$1 000 – $2 000", "s11.c4.label": "Обсудим на встрече", "s11.c4.desc": "Зависит от объёма", "s11.c4.val": "Обсудим на встрече", "s12.eyebrow": "Сроки", "s12.title": "Когда планируете запуск?", "s12.hint": "Поможет правильно расставить приоритеты.", "s12.c1.label": "Как можно скорее", "s12.c1.desc": "Готовы начать сразу", "s12.c1.val": "Как можно скорее", "s12.c2.label": "В течение 1–2 месяцев", "s12.c2.val": "В течение 1–2 месяцев", "s12.c3.label": "Через 2–3 месяца", "s12.c3.val": "Через 2–3 месяца", "s12.c4.label": "Пока изучаю", "s12.c4.desc": "Конкретных сроков нет", "s12.c4.val": "Пока изучаю, без конкретных сроков", "s13.eyebrow": "Детали", "s13.title": "Что ещё важно&nbsp;учесть?", "s13.hint": "Домен, языки сайта, аккаунт Хорошоп, референсы. <b>Необязательно.</b>", "s13.comment.label": "Комментарий", "s13.comment.ph": "Например: есть домен и логотип; нужны украинская и русская версии; уже есть аккаунт Хорошоп; нравится магазин-референс…", "su.eyebrow": "Заявка принята", "su.title": "Спасибо за&nbsp;доверие.", "su.text": "Мы внимательно изучим информацию о вашем проекте и свяжемся с вами в течение одного рабочего дня.", "su.li1": "Изучим ваш бизнес и ассортимент.", "su.li2": "Оценим объём работ и сроки.", "su.li3": "Подготовим рекомендации по запуску.", "su.li4": "Свяжемся с вами для обсуждения деталей.", "su.footnote": "Каждый проект рассматривается индивидуально.", "su.btn_return": "Вернуться на главную"}, uk: {"meta_title": "МС — Інтернет-магазини на Хорошоп", "badge": "Бутикова&nbsp;студія", "hero_eyebrow": "Запуск на Хорошоп", "hero_title": "Інтернет-магазини,<br>готові до продажів<br><em>з першого дня.</em>", "hero_sub": "Вивчимо ваш проєкт, запропонуємо структуру та&nbsp;підготуємо індивідуальний план запуску.", "hero_note": "Заповнення брифу займе близько 7&nbsp;хвилин.", "btn_open": "Обговорити проєкт", "response_note": "Відповімо протягом одного робочого дня.", "btn_continue": "Продовжити", "btn_submit": "Надіслати заявку", "skip": "Пропустити", "back_title": "Назад", "close_title": "Закрити", "s1.eyebrow": "Знайомство", "s1.title": "Розкажіть про&nbsp;ваш проєкт", "s1.hint": "Кілька деталей, щоб підготуватися до&nbsp;розмови предметно.", "s1.name.label": "Ваше ім'я", "s1.name.ph": "Як вас звати?", "s1.name.err": "Будь ласка, введіть ваше ім'я", "s1.company.label": "Компанія або бренд", "s1.company.ph": "Назва проєкту", "s2.eyebrow": "Контакти", "s2.title": "Як з вами зв'язатися?", "s2.hint": "Зв'яжемося зручним способом і&nbsp;надішлемо оцінку проєкту.", "s2.phone.label": "Телефон", "s2.phone.err": "Введіть номер у форматі +38 0XX XXX XX XX", "s2.email.label": "Email", "s2.email.err": "Перевірте формат email", "s3.eyebrow": "Завдання", "s3.title": "Що потрібно зробити?", "s3.hint": "Від цього залежить і&nbsp;підхід, і&nbsp;оцінка.", "s3.c1.label": "Новий магазин з&nbsp;нуля", "s3.c1.desc": "Зберемо і налаштуємо на Хорошоп", "s3.c1.val": "Новий магазин з нуля", "s3.c2.label": "Перенесення з іншої платформи", "s3.c2.desc": "Prom, OpenCart, WordPress та ін.", "s3.c2.val": "Перенесення з іншої платформи", "s3.c3.label": "Доопрацювання чинного", "s3.c3.desc": "Магазин уже на Хорошоп", "s3.c3.val": "Доопрацювання чинного магазину на Хорошоп", "s3.c4.label": "Поки не визначився", "s3.c4.desc": "Потрібна консультація", "s3.c4.val": "Потрібна консультація", "s4.eyebrow": "Ніша", "s4.title": "Що ви продаєте?", "s4.hint": "Опишіть асортимент своїми словами — що детальніше, то точніша оцінка.", "s4.niche.label": "Ніша та асортимент", "s4.niche.ph": "Наприклад: жіночий одяг plus-size; натуральна косметика; товари для дому та декор; дитячі розвивальні іграшки…", "s4.niche.err": "Розкажіть трохи детальніше про вашу нішу", "s5.eyebrow": "Каталог", "s5.title": "Скільки товарів планується?", "s5.hint": "Орієнтовно.", "s5.c1.label": "До 50", "s5.c1.desc": "Невеликий фокусний асортимент", "s5.c1.val": "До 50", "s5.c2.label": "50–300", "s5.c2.desc": "Середній каталог", "s5.c2.val": "50–300", "s5.c3.label": "300–1500", "s5.c3.desc": "Великий каталог", "s5.c3.val": "300–1500", "s5.c4.label": "Понад 1500", "s5.c4.desc": "Масштабний каталог", "s5.c4.val": "Понад 1500", "s6.eyebrow": "Товари", "s6.title": "Як завантажити товари?", "s6.hint": "Від джерела залежить спосіб наповнення та&nbsp;строки.", "s6.c1.label": "Файл Excel / CSV", "s6.c1.desc": "Завантажимо з вашої таблиці", "s6.c1.val": "Файл Excel/CSV", "s6.c2.label": "Фід від постачальника", "s6.c2.desc": "XML / YML вивантаження", "s6.c2.val": "Фід від постачальника (XML/YML)", "s6.c3.label": "З 1С / складської системи", "s6.c3.val": "З 1С / складської системи", "s6.c4.label": "Зі старого сайту", "s6.c4.desc": "Перенесемо наявний каталог", "s6.c4.val": "Перенесення зі старого сайту", "s6.c5.label": "Потрібна допомога", "s6.c5.desc": "Підкажемо оптимальний спосіб", "s6.c5.val": "Потрібна допомога із завантаженням", "s7.eyebrow": "Контент", "s7.title": "Контент і бренд готові?", "s7.hint": "Логотип, фірмові кольори, фото товарів, описи.", "s7.c1.label": "Усе готово", "s7.c1.desc": "Лого, фото й тексти на руках", "s7.c1.val": "Усе готово", "s7.c2.label": "Частково", "s7.c2.desc": "Частина матеріалів є", "s7.c2.val": "Частково готово", "s7.c3.label": "Потрібна допомога", "s7.c3.desc": "Допоможемо з фото, текстами й лого", "s7.c3.val": "Потрібна допомога з контентом", "s8.eyebrow": "Дизайн", "s8.title": "Який шаблон потрібен?", "s8.hint": "Хорошоп працює на готових шаблонах — налаштуємо під&nbsp;вас.", "s8.c1.label": "Стандартний шаблон", "s8.c1.desc": "Налаштуємо типовий шаблон Хорошоп", "s8.c1.val": "Стандартний шаблон", "s8.c2.label": "Шаблон під бренд", "s8.c2.desc": "Підберемо та адаптуємо: лого, кольори, блоки", "s8.c2.val": "Шаблон з адаптацією під бренд", "s8.c3.label": "Допоможіть обрати", "s8.c3.desc": "Підкажемо відповідний шаблон", "s8.c3.val": "Допоможіть обрати шаблон", "s9.eyebrow": "Інтеграції", "s9.title": "Що підключити до&nbsp;магазину?", "s9.hint": "Можна обрати кілька пунктів або просто натиснути «Продовжити».", "s9.c1.label": "Оплата онлайн", "s9.c1.desc": "LiqPay, Mono, WayForPay", "s9.c1.val": "Оплата онлайн (LiqPay, Mono, WayForPay)", "s9.c2.label": "Доставка", "s9.c2.desc": "Нова Пошта, Укрпошта", "s9.c2.val": "Доставка (Нова Пошта, Укрпошта)", "s9.c3.label": "1С / складська система", "s9.c3.val": "1С / складська система", "s9.c4.label": "Маркетплейси", "s9.c4.desc": "Rozetka, Prom", "s9.c4.val": "Маркетплейси (Rozetka, Prom)", "s9.c5.label": "CRM", "s9.c5.val": "CRM", "s9.c6.label": "Аналітика", "s9.c6.desc": "GA4, Meta Pixel", "s9.c6.val": "Аналітика (GA4, Meta Pixel)", "s10.eyebrow": "Просування", "s10.title": "Потрібні послуги крім&nbsp;сайту?", "s10.hint": "Можна обрати кілька пунктів або просто натиснути «Продовжити».", "s10.c1.label": "SEO-просування", "s10.c1.desc": "Трафік із пошуку", "s10.c1.val": "SEO-просування", "s10.c2.label": "Google Ads", "s10.c2.val": "Google Ads", "s10.c3.label": "Meta Ads", "s10.c3.desc": "Facebook та Instagram", "s10.c3.val": "Meta Ads", "s10.c4.label": "Наповнення каталогу", "s10.c4.desc": "Завантажимо товари за вас", "s10.c4.val": "Наповнення каталогу", "s10.c5.label": "Копірайтинг", "s10.c5.desc": "Тексти для товарів і сторінок", "s10.c5.val": "Копірайтинг", "s11.eyebrow": "Бюджет", "s11.title": "Бюджет на створення магазину?", "s11.hint": "Орієнтовно, без урахування щомісячної підписки Хорошоп.", "s11.c1.label": "До $500", "s11.c1.val": "До $500", "s11.c2.label": "$500 – $1 000", "s11.c2.val": "$500 – $1 000", "s11.c3.label": "$1 000 – $2 000", "s11.c3.val": "$1 000 – $2 000", "s11.c4.label": "Обговоримо на зустрічі", "s11.c4.desc": "Залежить від обсягу", "s11.c4.val": "Обговоримо на зустрічі", "s12.eyebrow": "Строки", "s12.title": "Коли плануєте запуск?", "s12.hint": "Допоможе правильно розставити пріоритети.", "s12.c1.label": "Якомога швидше", "s12.c1.desc": "Готові почати одразу", "s12.c1.val": "Якомога швидше", "s12.c2.label": "Протягом 1–2 місяців", "s12.c2.val": "Протягом 1–2 місяців", "s12.c3.label": "Через 2–3 місяці", "s12.c3.val": "Через 2–3 місяці", "s12.c4.label": "Поки вивчаю", "s12.c4.desc": "Конкретних строків немає", "s12.c4.val": "Поки вивчаю, без конкретних строків", "s13.eyebrow": "Деталі", "s13.title": "Що ще важливо&nbsp;врахувати?", "s13.hint": "Домен, мови сайту, акаунт Хорошоп, референси. <b>Необов'язково.</b>", "s13.comment.label": "Коментар", "s13.comment.ph": "Наприклад: є домен і логотип; потрібні українська та російська версії; вже є акаунт Хорошоп; подобається магазин-референс…", "su.eyebrow": "Заявку прийнято", "su.title": "Дякуємо за&nbsp;довіру.", "su.text": "Ми уважно вивчимо інформацію про ваш проєкт і зв'яжемося з вами протягом одного робочого дня.", "su.li1": "Вивчимо ваш бізнес і асортимент.", "su.li2": "Оцінимо обсяг робіт і строки.", "su.li3": "Підготуємо рекомендації щодо запуску.", "su.li4": "Зв'яжемося з вами для обговорення деталей.", "su.footnote": "Кожен проєкт розглядається індивідуально.", "su.btn_return": "Повернутися на головну"} };
 
 function t(k){ var d = I18N[LANG] || I18N[DEFAULT_LANG]; return (d && d[k] != null) ? d[k] : ((I18N[DEFAULT_LANG] && I18N[DEFAULT_LANG][k]) || ''); }
 
@@ -1536,28 +1532,55 @@ function pluralDigits(n) {
   if (m10 >= 2 && m10 <= 4) return (LANG === 'uk') ? 'цифри' : 'цифры';
   return 'цифр';
 }
-function buildPhoneMeter() {
-  const pips = document.querySelector('#phone-meter .pips');
-  if (!pips || pips.childElementCount) return;
-  for (let i = 0; i < 12; i++) {
-    const pip = document.createElement('span');
-    pip.className = 'pip';
-    pips.appendChild(pip);
+var UA_OPERATORS = {
+  '050':'Vodafone','066':'Vodafone','075':'Vodafone','095':'Vodafone','099':'Vodafone',
+  '067':'Kyivstar','068':'Kyivstar','077':'Kyivstar','096':'Kyivstar','097':'Kyivstar','098':'Kyivstar',
+  '063':'lifecell','073':'lifecell','093':'lifecell',
+  '091':'3mob','092':'PEOPLEnet','094':'Інтертелеком'
+};
+// Разбираем введённое значение в украинский мобильный формат
+function parsePhone(value) {
+  var d = String(value || '').replace(/\D/g, '');
+  if (d.indexOf('380') === 0) d = d.slice(3);
+  else if (d.indexOf('80') === 0) d = d.slice(2);
+  if (d.indexOf('0') === 0) d = d.slice(1);
+  d = d.slice(0, 9);                       // оператор(2) + номер(7)
+  var display = '';
+  if (d.length > 0) {
+    display = '+38 0' + d.slice(0, 2);
+    if (d.length >= 3) display += ' ' + d.slice(2, 5);
+    if (d.length >= 6) display += ' ' + d.slice(5, 7);
+    if (d.length >= 8) display += ' ' + d.slice(7, 9);
   }
+  var code = d.length >= 2 ? ('0' + d.slice(0, 2)) : '';
+  var known = code ? Object.prototype.hasOwnProperty.call(UA_OPERATORS, code) : false;
+  return { national: d, display: display, code: code,
+           operator: known ? UA_OPERATORS[code] : null, known: known,
+           valid: d.length === 9 && known };
 }
+function buildPhoneMeter() { /* маска не требует предпостроения */ }
 function updatePhoneMeter() {
-  const el = document.getElementById('inp-phone');
-  const meter = document.getElementById('phone-meter');
-  if (!el || !meter) return;
-  const digits = (el.value.match(/\d/g) || []).length;
-  meter.querySelectorAll('.pip').forEach((pip, i) => pip.classList.toggle('on', i < digits));
-  const valid = digits >= 10 && digits <= 15;
-  meter.classList.toggle('valid', valid);
-  meter.classList.toggle('over', digits > 15);
-  const count = meter.querySelector('.phone-count');
-  const label = meter.querySelector('.phone-count-label');
-  if (count) count.textContent = digits;
-  if (label) label.textContent = pluralDigits(digits);
+  var el = document.getElementById('inp-phone');
+  if (!el) return;
+  var p = parsePhone(el.value);
+  // Маска: переписываем поле в чистый формат (лишние символы отсекаются)
+  if (el.value !== p.display) {
+    var atEnd = (el.selectionStart === el.value.length);
+    el.value = p.display;
+    if (atEnd) { try { el.setSelectionRange(p.display.length, p.display.length); } catch (e) {} }
+  }
+  var f = document.getElementById('f-phone');
+  var op = document.getElementById('phone-operator');
+  if (op) {
+    if (p.national.length >= 2) {
+      if (p.operator) { op.textContent = p.operator; op.className = 'phone-operator show' + (p.valid ? ' ok' : ''); }
+      else { op.textContent = (LANG === 'uk') ? 'Невідомий код' : 'Неизвестный код'; op.className = 'phone-operator show warn'; }
+    } else { op.textContent = ''; op.className = 'phone-operator'; }
+  }
+  if (f) {
+    f.classList.toggle('phone-valid', p.valid);
+    if (p.valid) f.classList.remove('has-error');
+  }
 }
 
 // ── CARD SELECTION ───────────────────────────────────────────
@@ -1605,9 +1628,7 @@ function validateStep(step) {
     const phoneField = document.getElementById('f-phone');
     const emailField = document.getElementById('f-email');
 
-    // Count digits only: 10–15 covers local and international formats
-    const digits = phone.replace(/\D/g, '');
-    const phoneOk = digits.length >= 10 && digits.length <= 15;
+    const phoneOk = parsePhone(phone).valid;
     if (!phoneOk) { phoneField.classList.add('has-error'); valid = false; }
     else { phoneField.classList.remove('has-error'); }
 
@@ -1824,7 +1845,18 @@ function initLanding() {
   buildPhoneMeter();
   updatePhoneMeter();
   var phoneEl = document.getElementById('inp-phone');
-  if (phoneEl) phoneEl.addEventListener('input', updatePhoneMeter);
+  if (phoneEl) {
+    phoneEl.addEventListener('input', updatePhoneMeter);
+    phoneEl.addEventListener('focus', function(){
+      if (parsePhone(phoneEl.value).national.length === 0) {
+        phoneEl.value = '+38 0';
+        try { phoneEl.setSelectionRange(phoneEl.value.length, phoneEl.value.length); } catch (e) {}
+      }
+    });
+    phoneEl.addEventListener('blur', function(){
+      if (parsePhone(phoneEl.value).national.length === 0) phoneEl.value = '';
+    });
+  }
 
   // Language switch buttons
   document.querySelectorAll('[data-lang-btn]').forEach(function(b){
