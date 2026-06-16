@@ -1260,12 +1260,12 @@ const CONFIG = {
   // ─────────────────────────────────────────────────────────────
   // ВАРИАНТ А (рекомендуется): отправка через ваш бэкенд.
   // Токен не виден в коде, нет проблем с CORS. См. файл api/lead.js.
-  SUBMIT_ENDPOINT: '/api/lead',         // отправка через ваш бэкенд (файл api/lead.js)
+  SUBMIT_ENDPOINT: '',                  // прямая отправка в Telegram (бэкенд не нужен)
 
   // ВАРИАНТ Б (быстро, но токен виден в исходнике страницы):
   // прямая отправка в Telegram. Работает только на реальном https-домене.
-  TELEGRAM_BOT_TOKEN: '',              // НЕ нужен при SUBMIT_ENDPOINT (токен — в env Vercel)
-  TELEGRAM_CHAT_ID:   '',              // НЕ нужен при SUBMIT_ENDPOINT (id — в env Vercel)
+  TELEGRAM_BOT_TOKEN: '8663759932:AAGk3fGm2xkvflxcDpTpZyreE_9nfrzy-zs',
+  TELEGRAM_CHAT_ID:   '651548353',
 
   // Запасной контакт: если отправка не удалась, предложим написать письмом.
   FALLBACK_EMAIL: '',                  // напр. 'hello@mc-studio.com'
